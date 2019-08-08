@@ -1,0 +1,11 @@
+module SwiftPackageObjC {
+    // This is the umbrella header (also in your "include" folder) for your existing wrapper implementation code which itself includes the "bullet" header files
+    header "SwiftPackageObjC.h"
+
+    //Link to the "bullet" library file in the Brew location (absolute path)
+    link "libturbojpeg.a"
+    // link "/Volumes/Data/Users/dhoerl/Development/SwiftPackageObjC/Libraries/libturbojpeg.a"
+
+    //Re-Export all included modules to packages that include this "CBulletWrapper" module 
+    export *
+}
