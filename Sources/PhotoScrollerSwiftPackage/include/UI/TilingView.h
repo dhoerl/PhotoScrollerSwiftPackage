@@ -14,10 +14,15 @@
  *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#import "PhotoScrollerCommon.h"
+//UIKit;
 
-#import "ImageDecoding/TileImageBuilder.h"
-#import "UI/ImageScrollView.h"
-#import "UI/TilingView.h"
+@class TiledImageBuilder;
 
-//#import "libturbojpeg/jpeglib.h"
+@interface TilingView : UIView
+@property (nonatomic, assign) BOOL annotates;
+
+- (id)initWithImageBuilder:(TiledImageBuilder *)imageBuilder;
+- (CGSize)imageSize;
+//- (UIImage *)image;
+
+@end
