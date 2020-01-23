@@ -14,12 +14,11 @@
  *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#define TIMING_STATS			1		// set to 1 if you want to see how long things take
-#define MEMORY_DEBUGGING		1		// set to 1 if you want to see how memory changes when images are processed
-#define MMAP_DEBUGGING			0		// set to 1 to see how mmap/munmap working
-#define MAPPING_IMAGES			0		// set to 1 to use MMAP for image tile retrieval - if 0 use pread
-#define USE_VIMAGE				0		// set to 1 if you want vImage to downsize images (slightly better quality, much much slower)
-#define LEVELS_INIT				0		// set to 1 if you want to specify the levels in the init method instead of using the target view size
+//#define TIMING_STATS			1		// set to 1 if you want to see how long things take
+//#define MEMORY_DEBUGGING		1		// set to 1 if you want to see how memory changes when images are processed
+//#define MMAP_DEBUGGING			0		// set to 1 to see how mmap/munmap working
+//#define MAPPING_IMAGES			0		// set to 1 to use MMAP for image tile retrieval - if 0 use pread
+//#define LEVELS_INIT				0		// set to 1 if you want to specify the levels in the init method instead of using the target view size
 
 #include <libkern/OSAtomic.h>
 
@@ -38,15 +37,9 @@
 
 //#import "UTCoreTypes.h"
 
-#if USE_VIMAGE == 1
-#import <Accelerate/Accelerate.h>
-#endif
-
-#ifdef LIBJPEG	
 #include "libturbojpeg/jpeglib.h"
 #include "libturbojpeg/turbojpeg.h"
 #include <setjmp.h>
-#endif
 
 #import <ImageIO/ImageIO.h>
 
@@ -110,8 +103,6 @@ typedef struct {
 
 #import "TiledImageBuilder.h"
 
-#ifdef LIBJPEG
-
 struct my_error_mgr {
   struct jpeg_error_mgr pub;		/* "public" fields */
   jmp_buf setjmp_buffer;			/* for return to caller */
@@ -134,8 +125,6 @@ typedef struct {
 	boolean							jpegFailed;
 } co_jpeg_source_mgr;
 
-#endif
-
 /* Will figure out a way to make these static again
 extern dispatch_queue_t		fileFlushQueue;
 extern dispatch_group_t		fileFlushGroup;
@@ -145,7 +134,6 @@ extern volatile	int32_t		fileFlushGroupSuspended;
 extern volatile int32_t		ubc_usage;					// rough idea of what our buffer cache usage is
 
 @interface TiledImageBuilder ()
-@property (nonatomic, assign) ImageDecoder decoder;
 @property (nonatomic, strong, readwrite) NSDictionary *properties;
 @property (nonatomic, assign, readwrite) BOOL failed;				// global Error flags
 @property (nonatomic, assign) imageMemory *ims;
@@ -153,9 +141,7 @@ extern volatile int32_t		ubc_usage;					// rough idea of what our buffer cache u
 @property (nonatomic, assign) size_t pageSize;
 @property (nonatomic, assign) CGSize size;
 
-#ifdef LIBJPEG
 @property (nonatomic, assign) co_jpeg_source_mgr *src_mgr;			// input
-#endif
 
 + (CGColorSpaceRef)colorSpace;
 + (dispatch_group_t)fileFlushGroup;
@@ -179,7 +165,6 @@ extern volatile int32_t		ubc_usage;					// rough idea of what our buffer cache u
 
 @end
 
-#ifdef LIBJPEG
 
 @interface TiledImageBuilder (JPEG)
 
@@ -192,4 +177,3 @@ extern volatile int32_t		ubc_usage;					// rough idea of what our buffer cache u
 
 @end
 
-#endif

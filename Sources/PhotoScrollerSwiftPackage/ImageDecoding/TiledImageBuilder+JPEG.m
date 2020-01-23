@@ -34,7 +34,6 @@ static void term_source(j_decompress_ptr cinfo);
 
 - (void)decodeImageData:(NSData *)data
 {
-	assert(self.decoder == libjpegTurboDecoder);
 	tjhandle decompressor = tjInitDecompress();
 
 	unsigned char *jpegBuf = (unsigned char *)[data bytes];
@@ -45,7 +44,7 @@ static void term_source(j_decompress_ptr cinfo);
 		jpegSize,
 		&jwidth,
 		&jheight,
-		&jpegSubsamp 
+		&jpegSubsamp
 		);
 
 	if(!self.failed) {
@@ -61,9 +60,9 @@ static void term_source(j_decompress_ptr cinfo);
 					self.orientation = [[self.properties objectForKey:@"Orientation"] integerValue];
 				}
 			}
-			CFRelease(imageSourcRef);			
+			CFRelease(imageSourcRef);
 		}
-	
+
 #if LEVELS_INIT == 0
 		self.zoomLevels = [self zoomLevelsForSize:CGSizeMake(jwidth, jheight)];
 		self.ims = calloc(self.zoomLevels, sizeof(imageMemory));
@@ -71,7 +70,7 @@ static void term_source(j_decompress_ptr cinfo);
 		[self mapMemoryForIndex:0 width:jwidth height:jheight];
 
 		imageMemory *imP = self.ims;	// 0th offset
-	
+
 		self.failed = (BOOL)tjDecompress2(decompressor,
 			jpegBuf,
 			jpegSize,

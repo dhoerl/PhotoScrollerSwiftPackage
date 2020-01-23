@@ -139,75 +139,21 @@ static float				ubc_threshold_ratio;
 }
 
 #if LEVELS_INIT == 0
-- (id)initWithImage:(CGImageRef)image size:(CGSize)sz orientation:(NSInteger)orient
-{
-	if((self = [self initWithDecoder:cgimageDecoder size:sz])) {
-		_orientation = orient;
-		{
-			mapWholeFile = YES;
-			[self decodeImage:image];
-		}
 
-#if TIMING_STATS == 1 && !defined(NDEBUG)
-		_finishTime = [self timeStamp];
-		_milliSeconds = (uint32_t)DeltaMAT(_startTime, _finishTime);
-		LOG(@"FINISH: %u milliseconds", _milliSeconds);
-#endif
-#if MEMORY_DEBUGGING == 1
-		[self freeMemory:@"FINISHED"];
-#endif
+- (id)initForNetworkDownloadWithSize:(CGSize)sz orientation:(NSInteger)orient
+{
+	if((self = [self initWithSize:sz])) {
+		_orientation = orient;
+		[self jpegInitNetwork];
 	}
 	return self;
 }
-
-- (id)initWithImagePath:(NSString *)path withDecode:(ImageDecoder)dec size:(CGSize)sz  orientation:(NSInteger)orient
-{
-	if((self = [self initWithDecoder:dec size:sz])) {
-		_orientation = orient;
-#ifdef LIBJPEG
-		if(_decoder == libjpegIncremental) {
-			[self jpegInitFile:path];
-		} else
-#endif		
-		{
-			mapWholeFile = YES;
-			[self decodeImageURL:[NSURL fileURLWithPath:path]];
-		}
-
-#if TIMING_STATS == 1 && !defined(NDEBUG)
-		_finishTime = [self timeStamp];
-		_milliSeconds = (uint32_t)DeltaMAT(_startTime, _finishTime);
-		LOG(@"FINISH-I: %u milliseconds", _milliSeconds);
-#endif
-#if MEMORY_DEBUGGING == 1
-		[self freeMemory:@"FINISHED"];
-#endif
-	}
-	return self;
-}
-- (id)initForNetworkDownloadWithDecoder:(ImageDecoder)dec size:(CGSize)sz orientation:(NSInteger)orient
-{
-	if((self = [self initWithDecoder:dec size:sz])) {
-		_orientation = orient;
-#ifdef LIBJPEG
-		if(_decoder == libjpegIncremental) {
-			[self jpegInitNetwork];
-		} else
-#endif
-		{
-			mapWholeFile = YES;
-			[self createImageFile];
-		}
-	}
-	return self;
-}
-- (id)initWithDecoder:(ImageDecoder)dec size:(CGSize)sz 
+- (id)initWithSize:(CGSize)sz
 {
 	if((self = [super init])) {
 #if TIMING_STATS == 1 && !defined(NDEBUG)
 		_startTime = [self timeStamp];
-#endif		
-		_decoder	= dec;
+#endif
 		_pageSize	= getpagesize();
 		_size		= sz;
 
@@ -217,9 +163,7 @@ static float				ubc_threshold_ratio;
 		float totalThresh	= (float)fm.totlMemory*ubc_threshold_ratio;
 		_ubc_threshold		= (int32_t)lrintf(MAX(freeThresh, totalThresh));
 
-#ifdef LIBJPEG
 		_src_mgr			= calloc(1, sizeof(co_jpeg_source_mgr));
-#endif
 		//LOG(@"A: freeThresh=%lf totalThresh=%lf ubc_thresh=%u", (freeThresh), (totalThresh), ubc_threshold);
 		//LOG(@"B: freeThresh=%d totalThresh=%d ubc_thresh=%d", (int)(freeThresh/(1024*1024)), (int)(totalThresh/(1024*1024)), (int)(_ubc_threshold/(1024*1024)));
 
@@ -229,71 +173,17 @@ static float				ubc_threshold_ratio;
 	return self;
 }
 
-#else // LEVELS_INIT != 0
+#else
 
-- (id)initWithImage:(CGImageRef)image levels:(NSUInteger)levels orientation:(NSInteger)orient
+- (id)initForNetworkDownloadWithLevels:(NSUInteger)levels orientation:(NSInteger)orient
 {
-	if((self = [self initWithDecoder:cgimageDecoder levels:levels])) {
-		orientation = orient;
-		{
-			mapWholeFile = YES;
-			[self decodeImage:image];
-		}
-
-#if TIMING_STATS == 1 && !defined(NDEBUG)
-		finishTime = [self timeStamp];
-		milliSeconds = (uint32_t)DeltaMAT(startTime, finishTime);
-		LOG(@"FINISH: %u milliseconds", milliSeconds);
-#endif
-#if MEMORY_DEBUGGING == 1
-		[self freeMemory:@"FINISHED"];
-#endif
+	if((self = [self initWithLevels:levels])) {
+		_orientation = orient;
+		[self jpegInitNetwork];
 	}
 	return self;
 }
-
-- (id)initWithImagePath:(NSString *)path withDecode:(ImageDecoder)dec levels:(NSUInteger)levels orientation:(NSInteger)orient
-{
-	if((self = [self initWithDecoder:dec levels:levels])) {
-		orientation = orient;
-#ifdef LIBJPEG
-		if(decoder == libjpegIncremental) {
-			[self jpegInitFile:path];
-		} else
-#endif		
-		{
-			mapWholeFile = YES;
-			[self decodeImageURL:[NSURL fileURLWithPath:path]];
-		}
-
-#if TIMING_STATS == 1 && !defined(NDEBUG)
-		finishTime = [self timeStamp];
-		milliSeconds = (uint32_t)DeltaMAT(startTime, finishTime);
-		LOG(@"FINISH-I: %u milliseconds", milliSeconds);
-#endif
-#if MEMORY_DEBUGGING == 1
-		[self freeMemory:@"FINISHED"];
-#endif
-	}
-	return self;
-}
-- (id)initForNetworkDownloadWithDecoder:(ImageDecoder)dec levels:(NSUInteger)levels orientation:(NSInteger)orient
-{
-	if((self = [self initWithDecoder:dec levels:levels])) {
-		orientation = orient;
-#ifdef LIBJPEG
-		if(decoder == libjpegIncremental) {
-			[self jpegInitNetwork];
-		} else 
-#endif
-		{
-			mapWholeFile = YES;
-			[self createImageFile];
-		}
-	}
-	return self;
-}
-- (id)initWithDecoder:(ImageDecoder)dec levels:(NSUInteger)levels
+- (id)initWithLevels:(NSUInteger)levels
 {
 	if((self = [super init])) {
 #if TIMING_STATS == 1 && !defined(NDEBUG)
@@ -301,7 +191,6 @@ static float				ubc_threshold_ratio;
 #endif		
 		zoomLevels = levels;
 		ims = calloc(zoomLevels, sizeof(imageMemory));
-		decoder = dec;
 		pageSize = getpagesize();
 
 		// Take a big chunk of either free memory or all memory
@@ -310,16 +199,15 @@ static float				ubc_threshold_ratio;
 		float totalThresh	= (float)fm.totlMemory*ubc_threshold_ratio;
 		ubc_threshold		= lrintf(MAX(freeThresh, totalThresh));
 
-#ifdef LIBJPEG
 		src_mgr				= calloc(1, sizeof(co_jpeg_source_mgr));
-#endif
 		//LOG(@"freeThresh=%d totalThresh=%d ubc_thresh=%d", (int)freeThresh/(1024*1024), (int)totalThresh/(1024*1024), (int)ubc_threshold/(1024*1024));
 
 		[[NSNotificationCenter defaultCenter] addObserver:self selector: @selector(lowMemory:) name:UIApplicationDidReceiveMemoryWarningNotification object:[UIApplication sharedApplication]];
 	}
 	return self;
 }
-#endif // LEVELS_INIT == 0
+
+#endif
 
 - (void)dealloc
 {
@@ -333,10 +221,8 @@ static float				ubc_threshold_ratio;
 
 	if(_imageFile) fclose(_imageFile);
 	if(_imagePath) unlink([_imagePath fileSystemRepresentation]);
-#ifdef LIBJPEG
 	if(_src_mgr->cinfo.src)	jpeg_destroy_decompress(&_src_mgr->cinfo);
 	free(_src_mgr);
-#endif
 }
 
 - (void)lowMemory:(NSNotification *)note
@@ -396,50 +282,8 @@ LOG(@"ZLEVELS=%d", zLevels);
 - (void)decodeImageURL:(NSURL *)url
 {
 	//LOG(@"URL=%@", url);
-#ifdef LIBJPEG
-	if(_decoder == libjpegTurboDecoder) {
-		NSData *data = [NSData dataWithContentsOfURL:url];
-		[self decodeImageData:data];
-	} else
-#endif
-	if(_decoder == cgimageDecoder) {
-		_failed = YES;
-		CGImageSourceRef imageSourcRef = CGImageSourceCreateWithURL((__bridge CFURLRef)url, NULL);
-		if(imageSourcRef) {
-			CFDictionaryRef dict = CGImageSourceCopyPropertiesAtIndex(imageSourcRef, 0, NULL);
-			if(dict) {
-				//CFShow(dict);
-				_properties = CFBridgingRelease(dict);
-				if(!_orientation) {
-					_orientation = [[_properties objectForKey:@"Orientation"] integerValue];
-				}
-			}
-			CGImageRef image = CGImageSourceCreateImageAtIndex(imageSourcRef, 0, NULL);
-			CFRelease(imageSourcRef); imageSourcRef = NULL;
-			if(image) {
-				_failed = NO;
-				[self decodeImage:image];
-				CGImageRelease(image);
-			}
-		}
-	}
-}
-
-- (void)decodeImage:(CGImageRef)image
-{
-	assert(_decoder == cgimageDecoder);
-	
-	size_t width	= CGImageGetWidth(image);
-	size_t height	= CGImageGetHeight(image);
-	
-#if LEVELS_INIT == 0
-	_zoomLevels = [self zoomLevelsForSize:CGSizeMake(width, height)];
-	_ims = calloc(_zoomLevels, sizeof(imageMemory));
-#endif
-
-	[self mapMemoryForIndex:0 width:width height:height];
-	[self drawImage:image];
-	if(!_failed) [self createLevelsAndTile];
+	NSData *data = [NSData dataWithContentsOfURL:url];
+	[self decodeImageData:data];
 }
 
 - (BOOL)createImageFile
@@ -591,7 +435,6 @@ LOG(@"ZLEVELS=%d", zLevels);
 
 - (CGSize)imageSize
 {
-#if LIBJPEG
 	switch(self.orientation) {
 	case 5:
 	case 6:
@@ -601,23 +444,6 @@ LOG(@"ZLEVELS=%d", zLevels);
 	default:
 		return CGSizeMake(_ims[0].map.width, _ims[0].map.height);
 	}
-#else
-	//NSLog(@"decoder %d", (int)(cgimageDecoder));
-	//NSLog(@"props %@", _properties);
-
-	CGFloat width = [_properties[@"PixelWidth"] floatValue];
-	CGFloat height = [_properties[@"PixelHeight"] floatValue];
-	
-	switch(self.orientation) {
-	case 5:
-	case 6:
-	case 7:
-	case 8:
-		return CGSizeMake(height, width);
-	default:
-		return CGSizeMake(width, height);
-	}
-#endif
 }
 
 - (void)drawImage:(CGImageRef)image

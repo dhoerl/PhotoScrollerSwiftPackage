@@ -151,30 +151,6 @@ else [self freeMemory:[NSString stringWithFormat:@"Under threshold: usage=%u thr
 
 //dumpIMS("RUN", &ims[idx]);
 
-#if USE_VIMAGE == 1
-#error This code must be reconciled with that below due to orientation changes
-		   vImage_Buffer src = {
-				.data = lastMap->addr,
-				.height = lastMap->height,
-				.width = lastMap->width,
-				.rowBytes = lastMap->bytesPerRow
-			};
-			
-		   vImage_Buffer dest = {
-				.data = currMap->addr,
-				.height = currMap->height,
-				.width = currMap->width,
-				.rowBytes = currMap->bytesPerRow
-			};
-
-			vImage_Error err = vImageScale_ARGB8888 (
-			   &src,
-			   &dest,
-			   NULL,
-			   0 // kvImageHighQualityResampling 
-			);
-			assert(err == kvImageNoError);
-#else	
 			// Take every other pixel, every other row, to "down sample" the image. This is fast but has known problems.
 			// Got a better idea? Submit a pull request.
 			madvise(lastMap->addr, lastMap->mappedSize-lastMap->emptyTileRowSize, MADV_SEQUENTIAL);
@@ -202,7 +178,7 @@ else [self freeMemory:[NSString stringWithFormat:@"Under threshold: usage=%u thr
 
 			madvise(lastMap->addr, lastMap->mappedSize-lastMap->emptyTileRowSize, MADV_FREE);
 			madvise(currMap->addr, currMap->mappedSize-currMap->emptyTileRowSize, MADV_FREE);
-#endif
+
 			// make tiles
 			BOOL ret = [self tileBuilder:&self.ims[idx-1] useMMAP:NO];
 			if(!ret) goto eRR;

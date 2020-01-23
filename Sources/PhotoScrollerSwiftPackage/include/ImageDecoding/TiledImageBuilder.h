@@ -44,7 +44,7 @@
  
 #import "PhotoScrollerCommon.h"
  
-@interface TiledImageBuilder : NSObject
+@interface TiledImageBuilder : NSOutputStream
 @property (nonatomic, strong, readonly) NSDictionary *properties;	// image properties from CGImageSourceCopyPropertiesAtIndex()
 @property (nonatomic, assign) NSInteger orientation;				// 0 == automatically set using EXIF orientation from image
 @property (nonatomic, assign) NSUInteger zoomLevels;				// explose the init setting
@@ -57,13 +57,9 @@
 + (void)setUbcThreshold:(float)val;									// default is 0.5 - Image disk cache can use half of the available free memory pool
 
 #if LEVELS_INIT == 0
-- (id)initWithImage:(CGImageRef)image size:(CGSize)sz orientation:(NSInteger)orientation;
-- (id)initWithImagePath:(NSString *)path withDecode:(ImageDecoder)decoder size:(CGSize)sz orientation:(NSInteger)orientation;
-- (id)initForNetworkDownloadWithDecoder:(ImageDecoder)dec size:(CGSize)sz orientation:(NSInteger)orientation;
+- (id)initForNetworkDownloadWithSize:(CGSize)sz orientation:(NSInteger)orientation;
 #else
-- (id)initWithImage:(CGImageRef)image levels:(NSUInteger)levels orientation:(NSInteger)orientation;
-- (id)initWithImagePath:(NSString *)path withDecode:(ImageDecoder)decoder levels:(NSUInteger)levels orientation:(NSInteger)orientation;
-- (id)initForNetworkDownloadWithDecoder:(ImageDecoder)dec levels:(NSUInteger)levels orientation:(NSInteger)orientation;
+- (id)initForNetworkDownloadWithLevels:(NSUInteger)levels orientation:(NSInteger)orientation;
 #endif
 
 - (void)writeToImageFile:(NSData *)data;
@@ -81,10 +77,41 @@
 
 @end
 
-#ifdef LIBJPEG
 @interface TiledImageBuilder (JPEG_PUB)
 
 - (BOOL)jpegAdvance:(NSData *)data;
 
 @end
-#endif
+
+/*
+ @interface MyOutputStream ()
+
+ //@property (nonatomic, strong, readwrite) NSMutableData *data;
+
+ @end
+
+ @implementation MyOutputStream
+
+ - (instancetype)initToMemory {
+	 self = [super initToMemory];
+	 //_data = [NSMutableData new];
+	 return self;
+ }
+
+ - (void)open {
+	 [super open];
+ }
+
+ - (BOOL)hasSpaceAvailable {
+	 return YES;
+ }
+
+ - (NSInteger)write:(const uint8_t *)buffer maxLength:(NSUInteger)len {
+ //	[self.data appendBytes:buffer length:len];
+	 return len;
+ }
+
+ @end
+
+*/
+ */
