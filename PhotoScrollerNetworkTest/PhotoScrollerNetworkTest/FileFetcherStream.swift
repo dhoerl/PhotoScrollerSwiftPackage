@@ -8,6 +8,7 @@
 
 import Foundation
 
+// NOTE: cannot subclass InputStream as we'd loose all the built in
 @objcMembers
 final class FileFetcherStream: Stream {
 
@@ -35,10 +36,28 @@ final class FileFetcherStream: Stream {
         close()
     }
 
-    func close() {
+    override var delegate: StreamDelegate? {
+        get { return inputStream.delegate }
+        set { }
+    }
+
+    override func open() {
+        inputStream.open()
+    }
+
+    override func close() {
         inputStream.close()
         CFReadStreamSetDispatchQueue(inputStream, nil)
         inputStream.delegate = nil
     }
 
+    override var streamStatus: Stream.Status {
+        return inputStream.streamStatus
+    }
+
+    override var streamError: Error? {
+        return inputStream.streamError
+    }
+
 }
+
