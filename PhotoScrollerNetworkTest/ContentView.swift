@@ -13,8 +13,12 @@ struct ContentView: View {
 
     var body: some View {
         NavigationView {
-            MV(dates: $dates)
-            DetailView()
+            //MV(dates: $dates)
+            MasterView(dates: $dates)
+//                .navigationBarTitle(
+//                    Text("Image Management").font(.largeTitle)
+//                )
+            DetailView(kvp: ("", URL(fileURLWithPath: "/") ))
         }
         .modifier( WTF() )
     }

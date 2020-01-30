@@ -8,30 +8,56 @@
 
 import SwiftUI
 
-private let dateFormatter: DateFormatter = {
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateStyle = .medium
-    dateFormatter.timeStyle = .medium
-    return dateFormatter
-}()
 
 struct DetailView: View {
-    var selectedDate: Date?
+    @EnvironmentObject var appEnvironment: AppEnvironment
+    var kvp: (key: String, value: URL)
+
+    
+//    @Binding var dates: [Date]
+
+//    init(_ dates: Binding<[Date]>) {
+//        self.dates = dates
+//
+//        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+//            self.dates.insert(Date(), at: 0)
+//            print("FAD")
+//        }
+//    }
 
     var body: some View {
+
+//NavigationView {
         Group {
-            if selectedDate != nil {
-                Text("\(selectedDate!, formatter: dateFormatter)")
+            if kvp.key != "" {
+                Text("\(kvp.key)")
+//                .onAppear {
+//                    withAnimation(Animation.easeInOut(duration: 2.0)) {
+//                        //self.animate = true
+//                    }
+//                }
             } else {
                 Text("Detail view content goes here")
             }
-        }.navigationBarTitle(Text("Detail"))
+        }
+//}
+            .navigationBarTitle(Text("Detail"), displayMode: .inline)
+            .navigationBarItems(
+                //leading: Text("Howdie"),
+                trailing: Button(
+                    action: {
+                        //withAnimation { self.dates.insert(Date(), at: 0) }
+                    }
+                ) {
+                    Image(systemName: "plus")
+                }
+            )
     }
 }
 
-struct DetailView_Previews: PreviewProvider {
-    static var previews: some View {
-        DetailView(selectedDate: Date())
-    }
-}
+//struct DetailView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        DetailView(selectedDate: Date())
+//    }
+//}
 

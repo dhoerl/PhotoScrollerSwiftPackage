@@ -6,11 +6,13 @@
 //  Copyright © 2020 Self. All rights reserved.
 //
 
+// NOTE: good blog on subclassing NSInputStream
+
 import Foundation
 
 // NOTE: cannot subclass InputStream as we'd loose all the built in
 @objcMembers
-final class FileFetcherStream: Stream {
+final class FileFetcherStream: InputStream {
 
     private let url: URL
     private let queue: DispatchQueue
@@ -31,6 +33,8 @@ final class FileFetcherStream: Stream {
         // https://stackoverflow.com/a/41050351/1633251
         // https://developer.apple.com/library/archive/samplecode/sc1236/Listings/TLSTool_TLSToolCommon_m.html
         CFReadStreamSetDispatchQueue(inputStream, queue)
+
+        super.init(data: Data())
     }
     deinit {
         close()
@@ -59,5 +63,16 @@ final class FileFetcherStream: Stream {
         return inputStream.streamError
     }
 
-}
+    override func read(_ buffer: UnsafeMutablePointer<UInt8>, maxLength len: Int) -> Int {
+        return inputStream.read(buffer, maxLength: len)
+    }
 
+    override func getBuffer(_ buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, length len: UnsafeMutablePointer<Int>) -> Bool {
+        return inputStream.getBuffer(buffer, length: len)
+    }
+
+    override var hasBytesAvailable: Bool {
+        return inputStream.hasBytesAvailable
+    }
+
+}
