@@ -109,82 +109,55 @@ extension AppDelegate: StreamDelegate {
     func stream(_ aStream: Stream, handle eventCode: Stream.Event) {
         dispatchPrecondition(condition: .onQueue(assetQueue))
 
-            switch eventCode {
-            case .openCompleted:
-                print("OPEN COMPLETED")
-            case .endEncountered:
-                print("AT END :-)")
-DispatchQueue.main.async {
-    self.fileFetcher?.close()    // NOT stream!!!
-    self.webFetcher?.close()
-    self.fileFetcher = nil
-    self.webFetcher = nil
-}
-            case .hasBytesAvailable:
-                guard let stream = aStream as? InputStream else { fatalError() }
-                do {
-                    //var byte: UInt8 = 0
-                    var ptr: UnsafeMutablePointer<UInt8>? = nil
-                    var len: Int = 0
+        switch eventCode {
+        case .openCompleted:
+            print("OPEN COMPLETED")
+        case .endEncountered:
+            print("AT END :-)")
 
-                    if stream.getBuffer(&ptr, length: &len) {
-                        print("HAHAHA GOT \(len)")
-                        if let ptr = ptr {
-                            print("and pointer:", String(describing: ptr))
-                        }
-                    } else {
-                        //print("AH FUCK NO GETBUFFER!!!")
-                    }
-                }
-                let askLen = 4_096
-                let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: askLen)
+            DispatchQueue.main.async {
+                self.fileFetcher?.close()    // NOT stream!!!
+                self.webFetcher?.close()
+                self.fileFetcher = nil
+                self.webFetcher = nil
+            }
+        case .hasBytesAvailable:
+            guard let stream = aStream as? InputStream else { fatalError() }
+            guard stream.hasBytesAvailable else { return }
+            let askLen: Int
+            do {
+                //var byte: UInt8 = 0
+                var ptr: UnsafeMutablePointer<UInt8>? = nil
+                var len: Int = 0
 
-
-                let readLen = stream.read(bytes, maxLength: askLen)
-//                print("READLEN:", readLen)
-//                if self.outputStream.hasSpaceAvailable {
-//                    let writeLen = self.outputStream.write(bytes, maxLength: readLen)
-//                    print("READ: writeLen=\(writeLen)")
-//                } else {
-//                    print("READ: no space!!!")
-//                }
-//                if readLen < askLen {
-//                    print("READ 1 \(readLen) bytes!")
-//                } else {
-//                    print("READ 2 \(readLen) bytes!")
-//                }
-
-                if readLen == 0 {
-                    print("WTF!")
-                }
-            case .errorOccurred:
-/*
-                 NSError *theError = [stream streamError];
-                 NSAlert *theAlert = [[NSAlert alloc] init];
-                 [theAlert setMessageText:@"Error reading stream!"];
-                 [theAlert setInformativeText:[NSString stringWithFormat:@"Error %i: %@",
-                     [theError code], [theError localizedDescription]]];
-                 [theAlert addButtonWithTitle:@"OK"];
-                 [theAlert beginSheetModalForWindow:[NSApp mainWindow]
-                     modalDelegate:self
-                     didEndSelector:@selector(alertDidEnd:returnCode:contextInfo:)
-                     contextInfo:nil];
-                 [stream close];
-                 [stream release];
-                 break;
-                 */
-                if let error = aStream.streamError {
-                    print("WTF!!! Error:", error)
+                if stream.getBuffer(&ptr, length: &len) {
+                    askLen = len
                 } else {
-                    print("ERROR BUT NO STREAM ERROR!!!")
+                    askLen = 4_096
                 }
-            default:
-                print("UNEXPECTED \(eventCode)", String(describing: eventCode))
+            }
+            let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: askLen)
+            let readLen = stream.read(bytes, maxLength: askLen)
+            
+            if readLen < askLen {
+                print("READ 1 \(readLen) bytes!")
+            } else {
+                print("READ 2 \(readLen) bytes!")
             }
 
+            if readLen == 0 {
+                print("WTF!")
+            }
+        case .errorOccurred:
+            aStream.close()
+            if let error = aStream.streamError {
+                print("WTF!!! Error:", error)
+            } else {
+                print("ERROR BUT NO STREAM ERROR!!!")
+            }
+        default:
+            print("UNEXPECTED \(eventCode)", String(describing: eventCode))
+        }
     }
-
-
-
 
 }

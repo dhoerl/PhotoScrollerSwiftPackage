@@ -11,30 +11,24 @@ import Network
 
 private let domain = "com.WebFetcherStream"
 
+/*
+ public enum Status : UInt { case notOpen opening open reading writing atEnd closed error
+*/
+
+// Another subclass: https://gist.github.com/khanlou/b5e07f963bedcb6e0fcc5387b46991c3
+
 @objcMembers
 final class WebFetcherStream: InputStream {
 
     static private var queue = DispatchQueue.main   // will crash if not set to something else
 
-//    static fileprivate let queue = DispatchQueue(label: "com.WebFetcherStream", qos: .userInitiated)
-//    static fileprivate var paths: [NWInterface: NWPath.Status] = [:]
     static private let monitor: NWPathMonitor = {
         let m = NWPathMonitor()
-        m.pathUpdateHandler = { (path: NWPath) in
-            isInternetUp = path.status == .satisfied
-//            print("WEB PATH STATUS:", path.status)
-//            path.availableInterfaces.forEach( { interfce in
-//                paths[interfce] = path.status
-//                DispatchQueue.main.async {
-//                    print("WEB INTERFACE PATH:", path.debugDescription, "Interface:", interfce, "Status:", path.status)
-//                }
-//
-//            } )
-        }
+        m.pathUpdateHandler = { isInternetUp = $0.status == .satisfied }
         m.start(queue: queue)
         return m
     }()
-    static var isInternetUp = false
+    static private var isInternetUp = false
 
     static fileprivate let sessionDelegate = SessionDelegate()
     static fileprivate let operationQueue: OperationQueue = {
@@ -55,30 +49,26 @@ final class WebFetcherStream: InputStream {
         return URLSession(configuration: config, delegate: sessionDelegate, delegateQueue: operationQueue)
     }()
 
-    //private var task: URLSessionDataTask? = nil
     private let url: URL
     private weak var _delegate: StreamDelegate?     // must do this because InputStream subclasses don't have a 'delegate' property (try to use it, crash and burn!)
-    private var isOpen = false
 
+    private var dataTask: URLSessionDataTask?
     private var data = Data()
-    private var _streamStatus: Stream.Status = .notOpen
-    private var _streamError: Error?
-    private var _hasBytesAvailable = false  // TODO: could use an atomic property wrapper
+    @AtomicWrapper private var _streamStatus: Stream.Status = .notOpen
+    @AtomicWrapper private var _streamError: Error?
+    @AtomicWrapper private var _hasBytesAvailable = false
 
     init(url: URL, delegate: StreamDelegate) {
         assert(!url.isFileURL)
         assert(Self.queue != DispatchQueue.main)
 
-        //myDelegate = delegate // Strong!
         self.url = url
         _delegate = delegate
 
         super.init(data: Data())
     }
     deinit {
-        if isOpen {
-            close()
-        }
+        close()
     }
 
     static func startMonitoring(onQueue: DispatchQueue) {
@@ -93,36 +83,28 @@ extension WebFetcherStream {
         guard let fetcher = Self.tasks[dataTask.taskIdentifier], let delegate = fetcher.delegate, let stream = delegate.stream  else { return print("START TASK FAILED") }
 
         fetcher._streamStatus = .open
-        //delegate.stream?(fetcher, handle: .openCompleted)
         stream(fetcher, .openCompleted)
     }
 
     static func cancelTask(_ dataTask: URLSessionDataTask, statusCode: Int) {
         guard let fetcher = Self.tasks[dataTask.taskIdentifier], let delegate = fetcher.delegate, let stream = delegate.stream  else { return }
 
-
-        // error is the connection failed
-        fetcher._streamStatus = .notOpen
+        fetcher._streamStatus = .error
         fetcher._streamError = NSError(domain: domain, code: statusCode, userInfo:[ NSLocalizedDescriptionKey: "Failed to connect: statusCode \(statusCode)"])
-        //delegate.stream?(fetcher, handle: .errorOccurred)
         stream(fetcher, .errorOccurred)
     }
 
     static func dataFromTask(_ dataTask: URLSessionDataTask, data nData: Data) {
         guard let fetcher = Self.tasks[dataTask.taskIdentifier], let delegate = fetcher.delegate, let stream = delegate.stream  else { return }
 
-        nData.regions.forEach { (d) in
-            fetcher.data.append(d)
-        }
+        nData.regions.forEach { fetcher.data.append($0) }
 
-        //delegate.stream?(fetcher, handle: .hasBytesAvailable)
         let oldHasBytes = fetcher._hasBytesAvailable
         let newHasBytes = !fetcher.data.isEmpty
         fetcher._hasBytesAvailable = newHasBytes
 
         if oldHasBytes == false && newHasBytes == true {
             queue.async {
-                //print("POST 2")
                 stream(fetcher, .hasBytesAvailable)
             }
         }
@@ -131,9 +113,16 @@ extension WebFetcherStream {
     static func completeFromTask(_ dataTask: URLSessionDataTask, error: Error?) {
         guard let fetcher = Self.tasks[dataTask.taskIdentifier], let delegate = fetcher.delegate, let stream = delegate.stream  else { return }
 
-        fetcher._streamStatus = .atEnd
-        //delegate.stream?(fetcher, handle: .endEncountered)
-        stream(fetcher, .endEncountered)
+        if let error = error {
+            fetcher._streamStatus = .error
+            fetcher._streamError = error
+            stream(fetcher, .errorOccurred)
+        } else {
+            fetcher._streamStatus = .atEnd
+            if fetcher.data.isEmpty {
+                stream(fetcher, .endEncountered)
+            }
+        }
     }
 }
 
@@ -149,38 +138,38 @@ extension WebFetcherStream {
     override func open() {
         guard _streamStatus == .notOpen else { fatalError() }
 
-Self.queue.async {
+        Self.queue.async {
+            guard Self.isInternetUp else {
+                self._streamStatus = .error
+                self._streamError = NSError(domain: domain, code: 1, userInfo:[ NSLocalizedDescriptionKey: "Internet is down"])
+                self._delegate?.stream?(self, handle: .errorOccurred)
+                return
+            }
 
-        // TODO: check network state, if down send error
+            //let dataTask = Self.urlSession.dataTask(with: self.url)
+            let request = URLRequest(url: self.url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10.0)
+            let dataTask = Self.urlSession.dataTask(with: request)
+            Self.tasks[dataTask.taskIdentifier] = self
+            self.dataTask = dataTask
 
-
-        //let dataTask = Self.urlSession.dataTask(with: self.url)
-        let request = URLRequest(url: self.url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10.0)
-        let dataTask = Self.urlSession.dataTask(with: request)
-        Self.tasks[dataTask.taskIdentifier] = self
-
-        dataTask.resume()
-        self._streamStatus = .opening
-
-        /*
-                 public enum Status : UInt {
-                     case notOpen
-                     case opening
-                     case open
-                     case reading
-                     case writing
-                     case atEnd
-                     case closed
-                     case error
-                 }
-        */
-}
-        //print("OPEN WEB:", dataTask.state.rawValue)
+            dataTask.resume()
+            self._streamStatus = .opening
+        }
     }
 
     override func close() {
+        guard _streamStatus != .closed else { return }
+
         _streamStatus = .closed
         delegate = nil
+
+        if let dataTask = dataTask, dataTask.state == .running {
+            Self.queue.async {
+                Self.tasks[dataTask.taskIdentifier] = nil
+                dataTask.cancel()
+            }
+        }
+        dataTask = nil
     }
 
     override var streamStatus: Stream.Status {
@@ -188,25 +177,39 @@ Self.queue.async {
     }
 
     override var streamError: Error? {
-        return nil
+        return _streamError
     }
 
     // MARK: InputStream
 
     override func read(_ buffer: UnsafeMutablePointer<UInt8>, maxLength len: Int) -> Int {
+        dispatchPrecondition(condition: .onQueue(Self.queue))
+        guard _streamStatus == .open || _streamStatus == .atEnd else { print("STATUS:", _streamStatus.rawValue); return 0 }
+
+        _streamStatus = .reading
         let count = min(data.count, len)
-        let range = 0..<count
-        data.copyBytes(to: buffer, from: range)
-        data.removeSubrange(range)
+        if count > 0 {
+            let range = 0..<count
+            data.copyBytes(to: buffer, from: range)
+            data.removeSubrange(range)
+            _streamStatus = .open
+        }
 
         _hasBytesAvailable = !data.isEmpty
-        if _hasBytesAvailable, let delegate = delegate, let stream = delegate.stream {
+        if let delegate = delegate, let stream = delegate.stream {
             Self.queue.async {
-                // we do this so we don't stack recurse - happens some time in the future
-                print("POST 1")
-                stream(self, .hasBytesAvailable)
+                self._hasBytesAvailable = !self.data.isEmpty
+                if self._hasBytesAvailable {
+                    // we do this so we don't stack recurse - happens some time in the future
+                    print("POST 1")
+                    stream(self, .hasBytesAvailable)
+                } else
+                if self._streamStatus == .atEnd {
+                    stream(self, .endEncountered)
+                }
             }
         }
+
         return count
     }
 
@@ -225,6 +228,12 @@ Self.queue.async {
     override var hasBytesAvailable: Bool {
         return _hasBytesAvailable
     }
+
+    // From Soroush Khanlou, for completeness
+    override func property(forKey key: Stream.PropertyKey) -> Any? { return nil }
+    override func setProperty(_ property: Any?, forKey key: Stream.PropertyKey) -> Bool { return false }
+    override func schedule(in aRunLoop: RunLoop, forMode mode: RunLoop.Mode) { }
+    override func remove(from aRunLoop: RunLoop, forMode mode: RunLoop.Mode) { }
 
 }
 
@@ -257,88 +266,46 @@ fileprivate class SessionDelegate: NSObject, URLSessionDataDelegate {
 
 }
 
+@propertyWrapper
+private struct AtomicWrapper<T> {
+    private var semaphore = DispatchSemaphore(value: 1)
+    private var _wrappedValue: T
 
-/*
-func stream(_ aStream: Stream, handle eventCode: Stream.Event) {
-guard let stream = aStream as? InputStream else { fatalError() }
-dispatchPrecondition(condition: .onQueue(assetQueue))
-
-    switch eventCode {
-    case .openCompleted:
-        LOG("OPEN COMPLETED")
-    case .endEncountered:
-        LOG("AT END :-)")
-        fileFetcher.close()
-    case .hasBytesAvailable:
-// File fetcher does not implement this
-//                    do {
-//                        //var byte: UInt8 = 0
-//                        var ptr: UnsafeMutablePointer<UInt8>? = nil
-//                        var len: Int = 0
-//
-//                        if stream.getBuffer(&ptr, length: &len) {
-//                            LOG("HAHAHA GOT \(len)")
-//                            if let ptr = ptr {
-//                                LOG("and pointer:", String(describing: ptr))
-//                            }
-//                        }
-//                    }
-        guard let downstream = downstream else { return }
-
-        let askLen = howMuchToRead()
-LOG("GOT DATA ASKLEN:", askLen)
-        if askLen > 0 {
-            // We have outstanding requests
-            let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: askLen)  // mutable Data won't let us get a pointer anymore...
-            let readLen = stream.read(bytes, maxLength: askLen)
-            let data = Data(bytesNoCopy: bytes, count: readLen, deallocator: .custom({ (_, _) in bytes.deallocate() })) // (UnsafeMutableRawPointer, Int)
-
-            let fuck = downstream.receive(data)
-if let val = fuck.max {
-LOG("FUCK2 VAL:", val)
-} else { LOG("FUCK2 IS INFINITE!") }
-
-if let val = runningDemand.max {
-LOG("runningDemand2 VAL:", val)
-} else { LOG("runningDemand2 IS INFINITE!") }
-
-            LOG("READ \(readLen) bytes!")
-        } else {
-            // No outstanding requests, so buffer the data
-            let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: standardLen)  // mutable Data won't let us get a pointer anymore...
-            let readLen = stream.read(bytes, maxLength: standardLen)
-            savedData.append(bytes, count: readLen)
-            LOG("CACHE \(readLen) bytes!")
+    var wrappedValue: T  {
+        get {
+            semaphore.wait()
+            let tmp = _wrappedValue
+            semaphore.signal()
+            return tmp
         }
-/*
-        let readLen = stream.read(bytes, maxLength: 100_000)
-        LOG("READLEN:", readLen)
-        if self.outputStream.hasSpaceAvailable {
-            LOG("READ: writeLen=\(writeLen)")
-        } else {
-            LOG("READ: no space!!!")
+        set {
+            semaphore.wait()
+            _wrappedValue = newValue
+            semaphore.signal()
         }
-*/
-    case .errorOccurred:
-/*
-         NSError *theError = [stream streamError];
-         NSAlert *theAlert = [[NSAlert alloc] init];
-         [theAlert setMessageText:@"Error reading stream!"];
-         [theAlert setInformativeText:[NSString stringWithFormat:@"Error %i: %@",
-             [theError code], [theError localizedDescription]]];
-         [theAlert addButtonWithTitle:@"OK"];
-         [theAlert beginSheetModalForWindow:[NSApp mainWindow]
-             modalDelegate:self
-             didEndSelector:@selector(alertDidEnd:returnCode:contextInfo:)
-             contextInfo:nil];
-         [stream close];
-         [stream release];
-         break;
-         */
-        LOG("WTF!!! Error")
-    default:
-        LOG("UNEXPECTED \(eventCode)", String(describing: eventCode))
+    }
+
+    init(wrappedValue value: T) {
+        _wrappedValue = value
+    }
+
+    public var projectedValue: Self {
+      get { self }
+      set { self = newValue }
+    }
+
+    @discardableResult mutating func perform(block: (() -> T)) -> T {
+        semaphore.wait()
+        let tmp = block()
+        _wrappedValue = tmp
+        semaphore.signal()
+        return tmp
+    }
+
+    mutating func mutate(mutation: (inout T) -> Void)  {
+        semaphore.wait()
+        mutation(&_wrappedValue)
+        semaphore.signal()
     }
 
 }
-*/
