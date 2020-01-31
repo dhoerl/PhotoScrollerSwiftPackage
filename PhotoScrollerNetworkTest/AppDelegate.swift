@@ -49,7 +49,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         //fileTest()
         //combineFileTest()
 
-        webTest()
+        //webTest()
+        //combineWebTest()
 
 
         return true
@@ -68,7 +69,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // If any sessions were discarded while the application was not running, this will be called shortly after application:didFinishLaunchingWithOptions.
         // Use this method to release any resources that were specific to the discarded scenes, as they will not return.
     }
-
 
 }
 
@@ -94,6 +94,19 @@ extension AppDelegate: StreamDelegate {
 
         fileFetcher = FileFetcherStream(url: url, queue: assetQueue, delegate: self)
         fileFetcher?.open()
+    }
+
+    func combineWebTest() {
+        let url = URL(string: "https://www.dropbox.com/s/b337y2sn1597sry/Lake.jpg?dl=1")!
+
+        mySubscriber = AssetFetcher(url: url)
+                        .sink(receiveCompletion: { (error) in
+                            print("SINK ERROR:", error)
+                        },
+                        receiveValue: { (data) in
+                            print("SINK: got data:", data.count)
+                        })
+
     }
 
     func webTest() {
@@ -124,6 +137,7 @@ extension AppDelegate: StreamDelegate {
         case .hasBytesAvailable:
             guard let stream = aStream as? InputStream else { fatalError() }
             guard stream.hasBytesAvailable else { return }
+
             let askLen: Int
             do {
                 //var byte: UInt8 = 0
@@ -138,7 +152,7 @@ extension AppDelegate: StreamDelegate {
             }
             let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: askLen)
             let readLen = stream.read(bytes, maxLength: askLen)
-            
+
             if readLen < askLen {
                 print("READ 1 \(readLen) bytes!")
             } else {

@@ -13,12 +13,19 @@ import Combine
 //https://www.avanderlee.com/swift/custom-combine-publisher/ TOO COMPLICATED
 // https://ruiper.es/2019/08/05/custom-publishers-part1/ Two parts!
 
+private func LOG(_ items: Any..., separator: String = " ", terminator: String = "\n") {
+#if DEBUG
+        print("ASSET: " + items.map{String(describing: $0)}.joined(separator: separator), terminator: terminator)
+#endif
+}
+
 private let assetQueue = DispatchQueue(label: "com.AssetFetcher", qos: .userInitiated)
 
 final class AssetFetcher: Publisher {
 
     typealias Output = Data
     typealias Failure = Error
+
     let url: URL
 
     init(url: URL) {
@@ -28,19 +35,12 @@ final class AssetFetcher: Publisher {
     func receive<S>(subscriber: S) where S: Subscriber, Failure == S.Failure, Output == S.Input {
         let subscription = AssetFetcherSubscription(url: url, downstream: subscriber)
         subscriber.receive(subscription: subscription)
-
     }
 
 }
 
 protocol StreamReceive: class {
     func stream(_ aStream: Stream, handle eventCode: Stream.Event)
-}
-
-private func LOG(_ items: Any..., separator: String = " ", terminator: String = "\n") {
-#if DEBUG
-        print(items.map{String(describing: $0)}.joined(separator: separator), terminator: terminator)
-#endif
 }
 
 extension AssetFetcher {
@@ -51,9 +51,15 @@ extension AssetFetcher {
 
         private var downstream: DownStream? // optional so we can nil it on cancel
         private let url: URL
-        private var isFileURL: Bool { url.isFileURL }
+        //private var isFileURL: Bool { url.isFileURL }
         private lazy var streamReceiver: StreamReceiver = StreamReceiver(delegate: self)
-        private lazy var fileFetcher: FileFetcherStream = FileFetcherStream(url: url, queue: assetQueue, delegate: streamReceiver)
+        private lazy var _fileFetcher: FileFetcherStream = FileFetcherStream(url: url, queue: assetQueue, delegate: streamReceiver)
+        private lazy var _webFetcher: WebFetcherStream = {
+            WebFetcherStream.startMonitoring(onQueue: assetQueue)
+            let fetcher = WebFetcherStream(url: url, delegate: streamReceiver)
+            return fetcher
+        }()
+        private lazy var fetcher: InputStream = { url.isFileURL ? _fileFetcher : _webFetcher }()
 
         private var runningDemand: Subscribers.Demand = Subscribers.Demand.max(0)
         private var savedData = Data()
@@ -62,18 +68,15 @@ extension AssetFetcher {
             self.url = url
             self.downstream = downstream
 
-
-            if isFileURL {
-                let _ = fileFetcher
-            } else {
-
-            }
+            fetcher.open()
+            LOG("INIT")
         }
 
         func request(_ demand: Subscribers.Demand) {
-            guard let downstream = downstream else { return }
+            LOG("REQUEST")
+            guard let downstream = downstream else { return LOG("FUCKED") }
             runningDemand += demand
-            let askLen = howMuchToRead()
+            let askLen = howMuchToRead(request: standardLen)
 LOG("request, demand:", demand.max ?? "<infinite>", "runningDemand:", runningDemand.max ?? "<infinite>", "ASKLEN:", askLen)
             if askLen > 0 && savedData.count > 0 {
                 let readLen = askLen > savedData.count ? savedData.count : askLen // min won't work
@@ -101,12 +104,12 @@ if let val = runningDemand.max {
             downstream = nil
         }
 
-        private func howMuchToRead() -> Int {
+        private func howMuchToRead(request: Int) -> Int {
             let askLen: Int
             if let demandMax = runningDemand.max {
-                askLen = standardLen < demandMax ? standardLen : demandMax
+                askLen = request < demandMax ? request : demandMax
             } else {
-                askLen = standardLen
+                askLen = request
             }
             return askLen
         }
@@ -117,114 +120,64 @@ if let val = runningDemand.max {
             guard let stream = aStream as? InputStream else { fatalError() }
             dispatchPrecondition(condition: .onQueue(assetQueue))
 
-                switch eventCode {
-                case .openCompleted:
-                    LOG("OPEN COMPLETED")
-                case .endEncountered:
-                    LOG("AT END :-)")
-                    fileFetcher.close()
-                case .hasBytesAvailable:
-// File fetcher does not implement this
-//                    do {
-//                        //var byte: UInt8 = 0
-//                        var ptr: UnsafeMutablePointer<UInt8>? = nil
-//                        var len: Int = 0
-//
-//                        if stream.getBuffer(&ptr, length: &len) {
-//                            LOG("HAHAHA GOT \(len)")
-//                            if let ptr = ptr {
-//                                LOG("and pointer:", String(describing: ptr))
-//                            }
-//                        }
-//                    }
-                    guard let downstream = downstream else { return }
+            switch eventCode {
+            case .openCompleted:
+                LOG("OPEN COMPLETED")
+            case .endEncountered:
+                LOG("AT END :-)")
+                fetcher.close()
+            case .hasBytesAvailable:
+                LOG("hasBytesAvailable")
+                guard let downstream = downstream else { return }
+                guard stream.hasBytesAvailable else { return }
 
-                    let askLen = howMuchToRead()
-LOG("GOT DATA ASKLEN:", askLen)
-                    if askLen > 0 {
-                        // We have outstanding requests
-                        let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: askLen)  // mutable Data won't let us get a pointer anymore...
-                        let readLen = stream.read(bytes, maxLength: askLen)
-                        let data = Data(bytesNoCopy: bytes, count: readLen, deallocator: .custom({ (_, _) in bytes.deallocate() })) // (UnsafeMutableRawPointer, Int)
+                var askLen: Int
+                do {
+                    //var byte: UInt8 = 0
+                    var ptr: UnsafeMutablePointer<UInt8>? = nil
+                    var len: Int = 0
 
-                        let fuck = downstream.receive(data)
-    if let val = fuck.max {
-        LOG("FUCK2 VAL:", val)
-    } else { LOG("FUCK2 IS INFINITE!") }
-
-    if let val = runningDemand.max {
-        LOG("runningDemand2 VAL:", val)
-    } else { LOG("runningDemand2 IS INFINITE!") }
-
-                        LOG("READ \(readLen) bytes!")
+                    if stream.getBuffer(&ptr, length: &len) {
+                        askLen = len
                     } else {
-                        // No outstanding requests, so buffer the data
-                        let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: standardLen)  // mutable Data won't let us get a pointer anymore...
-                        let readLen = stream.read(bytes, maxLength: standardLen)
-                        savedData.append(bytes, count: readLen)
-                        LOG("CACHE \(readLen) bytes!")
+                        askLen = standardLen
                     }
-/*
-                    let readLen = stream.read(bytes, maxLength: 100_000)
-                    LOG("READLEN:", readLen)
-                    if self.outputStream.hasSpaceAvailable {
-                        LOG("READ: writeLen=\(writeLen)")
-                    } else {
-                        LOG("READ: no space!!!")
-                    }
-*/
-                case .errorOccurred:
-    /*
-                     NSError *theError = [stream streamError];
-                     NSAlert *theAlert = [[NSAlert alloc] init];
-                     [theAlert setMessageText:@"Error reading stream!"];
-                     [theAlert setInformativeText:[NSString stringWithFormat:@"Error %i: %@",
-                         [theError code], [theError localizedDescription]]];
-                     [theAlert addButtonWithTitle:@"OK"];
-                     [theAlert beginSheetModalForWindow:[NSApp mainWindow]
-                         modalDelegate:self
-                         didEndSelector:@selector(alertDidEnd:returnCode:contextInfo:)
-                         contextInfo:nil];
-                     [stream close];
-                     [stream release];
-                     break;
-                     */
-                    LOG("WTF!!! Error")
-                default:
-                    LOG("UNEXPECTED \(eventCode)", String(describing: eventCode))
                 }
+                askLen = howMuchToRead(request: askLen)
+
+LOG("GOT DATA ASKLEN:", askLen)
+                if askLen > 0 {
+                    // We have outstanding requests
+                    let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: askLen)  // mutable Data won't let us get a pointer anymore...
+                    let readLen = stream.read(bytes, maxLength: askLen)
+                    let data = Data(bytesNoCopy: bytes, count: readLen, deallocator: .custom({ (_, _) in bytes.deallocate() })) // (UnsafeMutableRawPointer, Int)
+
+                    let fuck = downstream.receive(data)
+if let val = fuck.max {
+    LOG("FUCK2 VAL:", val)
+} else { LOG("FUCK2 IS INFINITE!") }
+
+if let val = runningDemand.max {
+    LOG("runningDemand2 VAL:", val)
+} else { LOG("runningDemand2 IS INFINITE!") }
+
+                    LOG("READ \(readLen) bytes!")
+                } else {
+                    // No outstanding requests, so buffer the data
+                    let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: standardLen)  // mutable Data won't let us get a pointer anymore...
+                    let readLen = stream.read(bytes, maxLength: standardLen)
+                    savedData.append(bytes, count: readLen)
+                    LOG("CACHE \(readLen) bytes!")
+                }
+            case .errorOccurred:
+                LOG("WTF!!! Error", stream.streamError!)
+            default:
+                LOG("UNEXPECTED \(eventCode)", String(describing: eventCode))
+            }
 
         }
-
-//        func stream(_ aStream: Stream, handle eventCode: Stream.Event) {
-//            dispatchPrecondition(condition: .onQueue(assetQueue))
-//
-//
-//            switch eventCode {
-//            case .openCompleted:
-//                print("OPEN COMPLETED")
-//            case .endEncountered:
-//                print("AT END :-)")
-//                self.inputStream.close()
-//            case .hasBytesAvailable:
-//                let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: 100_000)
-//                let readLen = self.inputStream.read(bytes, maxLength: 100_000)
-//                if self.outputStream.hasSpaceAvailable {
-//                    let writeLen = self.outputStream.write(bytes, maxLength: readLen)
-//                    print("READ: writeLen=\(writeLen)")
-//                } else {
-//                    print("READ: no space!!!")
-//                }
-//                print("READ \(readLen) bytes!")
-//            case .errorOccurred:
-//                print("WTF!!! Error")
-//                break;
-//            default:
-//                print("UNEXPECTED \(eventCode)", String(describing: eventCode))
-//            }
-//
-//        }
     }
+
     @objcMembers final class StreamReceiver: NSObject, StreamDelegate {
 
         private weak var delegate: StreamReceive?
@@ -237,10 +190,10 @@ LOG("GOT DATA ASKLEN:", askLen)
             dispatchPrecondition(condition: .onQueue(assetQueue))
             self.delegate?.stream(aStream, handle: eventCode)
         }
+
     }
 
 }
-
 
 //struct UIControlPublisher<Control: UIControl>: Publisher {
 //
