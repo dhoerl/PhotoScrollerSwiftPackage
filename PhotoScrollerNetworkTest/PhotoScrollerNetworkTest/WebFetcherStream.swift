@@ -21,6 +21,17 @@ private let domain = "com.WebFetcherStream"
 @objcMembers
 final class WebFetcherStream: InputStream {
 
+    // Customization Points
+    static var maxOperations = 4
+    static var dataTaskTimeout: TimeInterval = 60.0
+    static var qualityOfService: QualityOfService = .userInitiated
+
+    // Must be called prior to instantiating any objects
+    static func startMonitoring(onQueue: DispatchQueue) {
+        queue = onQueue
+        let _ = monitor
+    }
+
     static private var queue = DispatchQueue.main   // will crash if not set to something else
 
     static private let monitor: NWPathMonitor = {
@@ -34,9 +45,9 @@ final class WebFetcherStream: InputStream {
     static fileprivate let sessionDelegate = SessionDelegate()
     static fileprivate let operationQueue: OperationQueue = {
         let opQueue = OperationQueue()
-        opQueue.maxConcurrentOperationCount = 1   // Apple says to make this a serial queue
+        opQueue.maxConcurrentOperationCount = maxOperations
         opQueue.name = "com.WebFetcherStream"
-        opQueue.qualityOfService = .userInitiated
+        opQueue.qualityOfService = qualityOfService
         opQueue.underlyingQueue = queue
         return opQueue
     }()
@@ -55,6 +66,7 @@ final class WebFetcherStream: InputStream {
 
     private var dataTask: URLSessionDataTask?
     private var data = Data()
+
     @AtomicWrapper private var _streamStatus: Stream.Status = .notOpen
     @AtomicWrapper private var _streamError: Error?
     @AtomicWrapper private var _hasBytesAvailable = false
@@ -70,18 +82,17 @@ final class WebFetcherStream: InputStream {
     }
     deinit {
         close()
+#if UNIT_TESTING
+        NotificationCenter.default.post(name: FetcherDeinit, object: nil, userInfo: [FetcherURL: url])
+#endif
     }
 
-    static func startMonitoring(onQueue: DispatchQueue) {
-        queue = onQueue
-        let _ = monitor
-    }
 }
 
 extension WebFetcherStream {
 
     static func startTask(_ dataTask: URLSessionDataTask) {
-        guard let fetcher = Self.tasks[dataTask.taskIdentifier], let delegate = fetcher.delegate, let stream = delegate.stream  else { return print("START TASK FAILED") }
+        guard let fetcher = Self.tasks[dataTask.taskIdentifier], let delegate = fetcher.delegate, let stream = delegate.stream  else { return }
 
         fetcher._streamStatus = .open
         stream(fetcher, .openCompleted)
@@ -147,8 +158,7 @@ extension WebFetcherStream {
                 return
             }
 
-            //let dataTask = Self.urlSession.dataTask(with: self.url)
-            let request = URLRequest(url: self.url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10.0)
+            let request = URLRequest(url: self.url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: Self.dataTaskTimeout)
             let dataTask = Self.urlSession.dataTask(with: request)
             Self.tasks[dataTask.taskIdentifier] = self
             self.dataTask = dataTask
@@ -160,17 +170,16 @@ extension WebFetcherStream {
 
     override func close() {
         guard _streamStatus != .closed else { return }
-
         _streamStatus = .closed
         delegate = nil
 
         if let dataTask = dataTask, dataTask.state == .running {
+            dataTask.cancel()
             Self.queue.async {
                 Self.tasks[dataTask.taskIdentifier] = nil
-                dataTask.cancel()
+                self.dataTask = nil
             }
         }
-        dataTask = nil
     }
 
     override var streamStatus: Stream.Status {
@@ -185,7 +194,7 @@ extension WebFetcherStream {
 
     override func read(_ buffer: UnsafeMutablePointer<UInt8>, maxLength len: Int) -> Int {
         dispatchPrecondition(condition: .onQueue(Self.queue))
-        guard _streamStatus == .open || _streamStatus == .atEnd else { print("STATUS:", _streamStatus.rawValue); return 0 }
+        guard _streamStatus == .open || _streamStatus == .atEnd else { return 0 }
 
         _streamStatus = .reading
         let count = min(data.count, len)
@@ -202,7 +211,6 @@ extension WebFetcherStream {
                 self._hasBytesAvailable = !self.data.isEmpty
                 if self._hasBytesAvailable {
                     // we do this so we don't stack recurse - happens some time in the future
-                    print("POST 1")
                     stream(self, .hasBytesAvailable)
                 } else
                 if self._streamStatus == .atEnd {
@@ -241,7 +249,7 @@ extension WebFetcherStream {
 // Helper task because the Class itself cannot be a delegate to a URL Session
 
 @objcMembers
-fileprivate class SessionDelegate: NSObject, URLSessionDataDelegate {
+private class SessionDelegate: NSObject, URLSessionDataDelegate {
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
         guard let response = response as? HTTPURLResponse else { fatalError() }
@@ -308,5 +316,4 @@ private struct AtomicWrapper<T> {
         mutation(&_wrappedValue)
         semaphore.signal()
     }
-
 }

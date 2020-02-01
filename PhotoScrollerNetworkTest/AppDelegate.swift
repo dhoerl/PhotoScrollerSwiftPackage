@@ -51,7 +51,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         //combineFileTest()
 
         //webTest()
-        //combineWebTest()
+        combineWebTest()
 
 
         return true
@@ -113,12 +113,29 @@ extension AppDelegate: StreamDelegate {
         let url = URL(string: "https://www.dropbox.com/s/b337y2sn1597sry/Lake.jpg?dl=1")!
 
         mySubscriber = AssetFetcher(url: url)
-                        .sink(receiveCompletion: { (error) in
-                            print("SINK ERROR:", error)
+                        .sink(receiveCompletion: { (completion) in
+                            switch completion {
+                            case .finished:
+                                print("SUCCESS:", self.data.count, UIImage(data: self.data) ?? "WTF")
+                            case .failure(let error):
+                                print("ERROR:", error)
+                            }
+                            DispatchQueue.main.async {
+                                self.mySubscriber = nil
+                            }
                         },
                         receiveValue: { (data) in
-                            print("SINK: got data:", data.count)
+                            //print("SINK: got data:", data.count)
+                            self.data.append(data)
                         })
+
+//        mySubscriber = AssetFetcher(url: url)
+//                        .sink(receiveCompletion: { (error) in
+//                            print("SINK ERROR:", error)
+//                        },
+//                        receiveValue: { (data) in
+//                            print("SINK: got data:", data.count)
+//                        })
 
     }
 
@@ -166,11 +183,13 @@ extension AppDelegate: StreamDelegate {
             let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: askLen)
             let readLen = stream.read(bytes, maxLength: askLen)
 
+#if false
             if readLen < askLen {
                 print("READ 1 \(readLen) bytes!")
             } else {
                 print("READ 2 \(readLen) bytes!")
             }
+#endif
 
             if readLen == 0 {
                 print("WTF!")

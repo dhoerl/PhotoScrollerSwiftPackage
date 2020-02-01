@@ -171,30 +171,8 @@ final class FileBased: XCTestCase, StreamDelegate {
             expectedFulfillmentCount += 3   // two classes and the final Subcriber block
             expectation.expectedFulfillmentCount = expectedFulfillmentCount
         }
-/*
-         .sink(receiveCompletion: { (completion) in
-             switch completion {
-             case .finished:
-                 print("SUCCESS:", self.data.count, UIImage(data: self.data) ?? "WTF")
-             case .failure(let error):
-                 print("ERROR:", error)
-             }
-             DispatchQueue.main.async {
-                 self.mySubscriber = nil
-             }
-         },
-         receiveValue: { (data) in
-             //print("SINK: got data:", data.count)
-             self.data.append(data)
-         })
 
-         */
         wait(for: [expectation], timeout: TimeInterval(files.count * 10))
-
-//        for byURL in fetchers.values {
-//            XCTAssert( !byURL.data.isEmpty )
-//            XCTAssert(byURL.image != nil)
-//        }
     }
 
 

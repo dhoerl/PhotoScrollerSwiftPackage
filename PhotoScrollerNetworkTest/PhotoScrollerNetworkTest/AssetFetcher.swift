@@ -79,19 +79,19 @@ private extension AssetFetcher {
             LOG("INIT")
         }
         deinit {
-LOG("FUCK A BIG DUCK! I GOT DEALLOCED!!!")
-downstream = nil
-fetcher.close()
+            fetcher.close()
 #if UNIT_TESTING
             NotificationCenter.default.post(name: FetcherDeinit, object: nil, userInfo: [AssetURL: url])
 #endif
         }
+
         func request(_ demand: Subscribers.Demand) {
             LOG("REQUEST")
-            guard let downstream = downstream else { return LOG("FUCKED") }
+            guard let downstream = downstream else { return LOG("WTF") }
             runningDemand += demand
             let askLen = howMuchToRead(request: standardLen)
-LOG("request, demand:", demand.max ?? "<infinite>", "runningDemand:", runningDemand.max ?? "<infinite>", "ASKLEN:", askLen)
+            LOG("request, demand:", demand.max ?? "<infinite>", "runningDemand:", runningDemand.max ?? "<infinite>", "ASKLEN:", askLen)
+
             if askLen > 0 && savedData.count > 0 {
                 let readLen = askLen > savedData.count ? savedData.count : askLen // min won't work
                 let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: readLen)  // mutable Data won't let us get a pointer anymore...
@@ -100,22 +100,19 @@ LOG("request, demand:", demand.max ?? "<infinite>", "runningDemand:", runningDem
                 let data = Data(bytesNoCopy: bytes, count: readLen, deallocator: .custom({ (_, _) in bytes.deallocate() })) // (UnsafeMutableRawPointer, Int)
 
                 savedData.removeSubrange(range)
-                let fuck = downstream.receive(data)
-if let val = fuck.max {
-    LOG("FUCK VAL:", val)
-} else { LOG("FUCK IS INFINITE!") }
-
-if let val = runningDemand.max {
-    LOG("runningDemand VAL:", val)
-} else { LOG("runningDemand IS INFINITE!") }
+                let _ = downstream.receive(data)
+//if let val = fuck.max {
+//    LOG("FUCK VAL:", val)
+//} else { LOG("FUCK IS INFINITE!") }
+//
+//if let val = runningDemand.max {
+//    LOG("runningDemand VAL:", val)
+//} else { LOG("runningDemand IS INFINITE!") }
             }
         }
 
-        // downstream?.receive(completion: .finished)
-        // downstream = nil
-
         func cancel() {
-LOG("FUCK A BIG DUCK! I GOT CANCELLED!!!")
+            LOG("CANCELLED")
             downstream = nil
             fetcher.close()
         }
@@ -139,13 +136,13 @@ LOG("FUCK A BIG DUCK! I GOT CANCELLED!!!")
 
             switch eventCode {
             case .openCompleted:
-                LOG("OPEN COMPLETED")
+                LOG("stream.openCompleted)")
             case .endEncountered:
-                LOG("AT END :-)")
+                LOG("stream.endEncountered")
                 fetcher.close()
                 downstream.receive(completion: .finished)
             case .hasBytesAvailable:
-                LOG("hasBytesAvailable")
+                LOG("stream.hasBytesAvailable")
                 guard stream.hasBytesAvailable else { return }
 
                 var askLen: Int
@@ -161,37 +158,37 @@ LOG("FUCK A BIG DUCK! I GOT CANCELLED!!!")
                     }
                 }
                 askLen = howMuchToRead(request: askLen)
-
-LOG("GOT DATA ASKLEN:", askLen)
+                LOG("stream.askLen=\(askLen)")
                 if askLen > 0 {
                     // We have outstanding requests
                     let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: askLen)  // mutable Data won't let us get a pointer anymore...
                     let readLen = stream.read(bytes, maxLength: askLen)
                     let data = Data(bytesNoCopy: bytes, count: readLen, deallocator: .custom({ (_, _) in bytes.deallocate() })) // (UnsafeMutableRawPointer, Int)
 
-                    let fuck = downstream.receive(data)
-if let val = fuck.max {
-    LOG("FUCK2 VAL:", val)
-} else { LOG("FUCK2 IS INFINITE!") }
+                    let _ = downstream.receive(data)
+//if let val = fuck.max {
+//    LOG("FUCK2 VAL:", val)
+//} else { LOG("FUCK2 IS INFINITE!") }
+//
+//if let val = runningDemand.max {
+//    LOG("runningDemand2 VAL:", val)
+//} else { LOG("runningDemand2 IS INFINITE!") }
 
-if let val = runningDemand.max {
-    LOG("runningDemand2 VAL:", val)
-} else { LOG("runningDemand2 IS INFINITE!") }
-
-                    LOG("READ \(readLen) bytes!")
+                    LOG("stream.read=\(readLen) bytes")
                 } else {
                     // No outstanding requests, so buffer the data
                     let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: standardLen)  // mutable Data won't let us get a pointer anymore...
                     let readLen = stream.read(bytes, maxLength: standardLen)
                     savedData.append(bytes, count: readLen)
-                    LOG("CACHE \(readLen) bytes!")
+                    LOG("stream.cache\(readLen) bytes")
                 }
             case .errorOccurred:
-                let err = stream.streamError ?? NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "Unknown Error"])
-                LOG("WTF!!! Error", err)
+                let err = stream.streamError ?? NSError(domain: "com.AssetFetcher", code: 0, userInfo: [NSLocalizedDescriptionKey: "Unknown Error"])
+                LOG("stream.error=\(err)")
                 downstream.receive(completion: .failure(err))
             default:
                 LOG("UNEXPECTED \(eventCode)", String(describing: eventCode))
+                fatalError()
             }
 
         }

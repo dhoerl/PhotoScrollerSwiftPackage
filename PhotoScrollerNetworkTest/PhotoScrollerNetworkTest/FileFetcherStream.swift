@@ -37,9 +37,9 @@ final class FileFetcherStream: InputStream {
     }
     deinit {
         close()
-    #if UNIT_TESTING
+#if UNIT_TESTING
         NotificationCenter.default.post(name: FetcherDeinit, object: nil, userInfo: [FetcherURL: url])
-    #endif
+#endif
     }
 
     override var delegate: StreamDelegate? {
