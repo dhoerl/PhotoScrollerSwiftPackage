@@ -19,6 +19,19 @@
 		DEADC63A23DDF30800BC8F70 /* Space4.jpg in Resources */ = {isa = PBXBuildFile; fileRef = DEADC63123DDF30800BC8F70 /* Space4.jpg */; };
 		DEADC63B23DDF30800BC8F70 /* Space6.jpg in Resources */ = {isa = PBXBuildFile; fileRef = DEADC63223DDF30800BC8F70 /* Space6.jpg */; };
 		DEADC63D23DF905300BC8F70 /* WebFetcherStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADC63C23DF905300BC8F70 /* WebFetcherStream.swift */; };
+		DEADC67323E47C2700BC8F70 /* FileBased.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADC67223E47C2700BC8F70 /* FileBased.swift */; };
+		DEADC67E23E47EB100BC8F70 /* Coffee.jpg in Resources */ = {isa = PBXBuildFile; fileRef = DEADC62E23DDF30800BC8F70 /* Coffee.jpg */; };
+		DEADC67F23E47EB100BC8F70 /* err_image.jpg in Resources */ = {isa = PBXBuildFile; fileRef = DEADC62A23DDF30800BC8F70 /* err_image.jpg */; };
+		DEADC68023E47EB100BC8F70 /* Lake.jpg in Resources */ = {isa = PBXBuildFile; fileRef = DEADC62B23DDF30800BC8F70 /* Lake.jpg */; };
+		DEADC68123E47EB100BC8F70 /* large_leaves_70mp.jpg in Resources */ = {isa = PBXBuildFile; fileRef = DEADC63023DDF30800BC8F70 /* large_leaves_70mp.jpg */; };
+		DEADC68223E47EB100BC8F70 /* Shed.jpg in Resources */ = {isa = PBXBuildFile; fileRef = DEADC62C23DDF30800BC8F70 /* Shed.jpg */; };
+		DEADC68323E47EB100BC8F70 /* Space4.jpg in Resources */ = {isa = PBXBuildFile; fileRef = DEADC63123DDF30800BC8F70 /* Space4.jpg */; };
+		DEADC68423E47EB100BC8F70 /* Space5.jpg in Resources */ = {isa = PBXBuildFile; fileRef = DEADC62D23DDF30800BC8F70 /* Space5.jpg */; };
+		DEADC68523E47EB100BC8F70 /* Space6.jpg in Resources */ = {isa = PBXBuildFile; fileRef = DEADC63223DDF30800BC8F70 /* Space6.jpg */; };
+		DEADC68623E47EB100BC8F70 /* Tree.jpg in Resources */ = {isa = PBXBuildFile; fileRef = DEADC62F23DDF30800BC8F70 /* Tree.jpg */; };
+		DEADC68723E47EBA00BC8F70 /* AssetFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADC62523DCE16100BC8F70 /* AssetFetcher.swift */; };
+		DEADC68823E47EBA00BC8F70 /* FileFetcherStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADC62723DDE66300BC8F70 /* FileFetcherStream.swift */; };
+		DEADC68923E47EBA00BC8F70 /* WebFetcherStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADC63C23DF905300BC8F70 /* WebFetcherStream.swift */; };
 		DEC3163323D7A562008E17E7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC3163223D7A562008E17E7 /* AppDelegate.swift */; };
 		DEC3163523D7A562008E17E7 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC3163423D7A562008E17E7 /* SceneDelegate.swift */; };
 		DEC3163723D7A562008E17E7 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC3163623D7A562008E17E7 /* ContentView.swift */; };
@@ -29,6 +42,16 @@
 		DEC3164C23D7A6B9008E17E7 /* MasterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC3164B23D7A6B9008E17E7 /* MasterView.swift */; };
 		DEC3164E23D7A6CA008E17E7 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC3164D23D7A6CA008E17E7 /* DetailView.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		DEADC67523E47C2700BC8F70 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DEC3162723D7A562008E17E7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DEC3162E23D7A562008E17E7;
+			remoteInfo = PhotoScrollerNetworkTest;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		DEADC62523DCE16100BC8F70 /* AssetFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetFetcher.swift; sourceTree = "<group>"; };
@@ -43,6 +66,9 @@
 		DEADC63123DDF30800BC8F70 /* Space4.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = Space4.jpg; path = Images/Space4.jpg; sourceTree = SOURCE_ROOT; };
 		DEADC63223DDF30800BC8F70 /* Space6.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = Space6.jpg; path = Images/Space6.jpg; sourceTree = SOURCE_ROOT; };
 		DEADC63C23DF905300BC8F70 /* WebFetcherStream.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebFetcherStream.swift; sourceTree = "<group>"; };
+		DEADC67023E47C2700BC8F70 /* PhotoScrollerNetworkTestTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PhotoScrollerNetworkTestTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DEADC67223E47C2700BC8F70 /* FileBased.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBased.swift; sourceTree = "<group>"; };
+		DEADC67423E47C2700BC8F70 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DEC3162F23D7A562008E17E7 /* PhotoScrollerNetworkTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhotoScrollerNetworkTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DEC3163223D7A562008E17E7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		DEC3163423D7A562008E17E7 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -57,6 +83,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		DEADC66D23E47C2700BC8F70 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DEC3162C23D7A562008E17E7 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -94,10 +127,20 @@
 			path = PhotoScrollerNetworkTest;
 			sourceTree = SOURCE_ROOT;
 		};
+		DEADC67123E47C2700BC8F70 /* PhotoScrollerNetworkTestTests */ = {
+			isa = PBXGroup;
+			children = (
+				DEADC67223E47C2700BC8F70 /* FileBased.swift */,
+				DEADC67423E47C2700BC8F70 /* Info.plist */,
+			);
+			path = PhotoScrollerNetworkTestTests;
+			sourceTree = "<group>";
+		};
 		DEC3162623D7A562008E17E7 = {
 			isa = PBXGroup;
 			children = (
 				DEC3163123D7A562008E17E7 /* PhotoScrollerNetworkTest */,
+				DEADC67123E47C2700BC8F70 /* PhotoScrollerNetworkTestTests */,
 				DEC3163023D7A562008E17E7 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -106,6 +149,7 @@
 			isa = PBXGroup;
 			children = (
 				DEC3162F23D7A562008E17E7 /* PhotoScrollerNetworkTest.app */,
+				DEADC67023E47C2700BC8F70 /* PhotoScrollerNetworkTestTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -165,6 +209,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		DEADC66F23E47C2700BC8F70 /* PhotoScrollerNetworkTestTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DEADC67923E47C2700BC8F70 /* Build configuration list for PBXNativeTarget "PhotoScrollerNetworkTestTests" */;
+			buildPhases = (
+				DEADC66C23E47C2700BC8F70 /* Sources */,
+				DEADC66D23E47C2700BC8F70 /* Frameworks */,
+				DEADC66E23E47C2700BC8F70 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DEADC67623E47C2700BC8F70 /* PBXTargetDependency */,
+			);
+			name = PhotoScrollerNetworkTestTests;
+			productName = PhotoScrollerNetworkTestTests;
+			productReference = DEADC67023E47C2700BC8F70 /* PhotoScrollerNetworkTestTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		DEC3162E23D7A562008E17E7 /* PhotoScrollerNetworkTest */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DEC3164323D7A564008E17E7 /* Build configuration list for PBXNativeTarget "PhotoScrollerNetworkTest" */;
@@ -192,6 +254,10 @@
 				LastUpgradeCheck = 1130;
 				ORGANIZATIONNAME = Self;
 				TargetAttributes = {
+					DEADC66F23E47C2700BC8F70 = {
+						CreatedOnToolsVersion = 11.3.1;
+						TestTargetID = DEC3162E23D7A562008E17E7;
+					};
 					DEC3162E23D7A562008E17E7 = {
 						CreatedOnToolsVersion = 11.3.1;
 					};
@@ -211,11 +277,28 @@
 			projectRoot = "";
 			targets = (
 				DEC3162E23D7A562008E17E7 /* PhotoScrollerNetworkTest */,
+				DEADC66F23E47C2700BC8F70 /* PhotoScrollerNetworkTestTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		DEADC66E23E47C2700BC8F70 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DEADC67E23E47EB100BC8F70 /* Coffee.jpg in Resources */,
+				DEADC68123E47EB100BC8F70 /* large_leaves_70mp.jpg in Resources */,
+				DEADC68623E47EB100BC8F70 /* Tree.jpg in Resources */,
+				DEADC68223E47EB100BC8F70 /* Shed.jpg in Resources */,
+				DEADC68523E47EB100BC8F70 /* Space6.jpg in Resources */,
+				DEADC68323E47EB100BC8F70 /* Space4.jpg in Resources */,
+				DEADC67F23E47EB100BC8F70 /* err_image.jpg in Resources */,
+				DEADC68423E47EB100BC8F70 /* Space5.jpg in Resources */,
+				DEADC68023E47EB100BC8F70 /* Lake.jpg in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DEC3162D23D7A562008E17E7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -238,6 +321,17 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		DEADC66C23E47C2700BC8F70 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DEADC68723E47EBA00BC8F70 /* AssetFetcher.swift in Sources */,
+				DEADC67323E47C2700BC8F70 /* FileBased.swift in Sources */,
+				DEADC68923E47EBA00BC8F70 /* WebFetcherStream.swift in Sources */,
+				DEADC68823E47EBA00BC8F70 /* FileFetcherStream.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DEC3162B23D7A562008E17E7 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -256,6 +350,14 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		DEADC67623E47C2700BC8F70 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DEC3162E23D7A562008E17E7 /* PhotoScrollerNetworkTest */;
+			targetProxy = DEADC67523E47C2700BC8F70 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin PBXVariantGroup section */
 		DEC3163D23D7A564008E17E7 /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
@@ -268,6 +370,48 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		DEADC67723E47C2700BC8F70 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 748Z47NBAH;
+				INFOPLIST_FILE = PhotoScrollerNetworkTestTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				OTHER_SWIFT_FLAGS = "-D UNIT_TESTING";
+				PRODUCT_BUNDLE_IDENTIFIER = com.dhoerl.PhotoScrollerNetworkTestTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PhotoScrollerNetworkTest.app/PhotoScrollerNetworkTest";
+			};
+			name = Debug;
+		};
+		DEADC67823E47C2700BC8F70 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 748Z47NBAH;
+				INFOPLIST_FILE = PhotoScrollerNetworkTestTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				OTHER_SWIFT_FLAGS = "-D UNIT_TESTING";
+				PRODUCT_BUNDLE_IDENTIFIER = com.dhoerl.PhotoScrollerNetworkTestTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PhotoScrollerNetworkTest.app/PhotoScrollerNetworkTest";
+			};
+			name = Release;
+		};
 		DEC3164123D7A564008E17E7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -425,6 +569,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		DEADC67923E47C2700BC8F70 /* Build configuration list for PBXNativeTarget "PhotoScrollerNetworkTestTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DEADC67723E47C2700BC8F70 /* Debug */,
+				DEADC67823E47C2700BC8F70 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		DEC3162A23D7A562008E17E7 /* Build configuration list for PBXProject "PhotoScrollerNetworkTest" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

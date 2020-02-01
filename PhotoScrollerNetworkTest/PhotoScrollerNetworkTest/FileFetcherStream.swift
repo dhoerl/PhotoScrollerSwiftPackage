@@ -6,7 +6,6 @@
 //  Copyright © 2020 Self. All rights reserved.
 //
 
-// NOTE: good blog on subclassing NSInputStream
 
 import Foundation
 
@@ -14,9 +13,9 @@ import Foundation
 @objcMembers
 final class FileFetcherStream: InputStream {
 
-    private let url: URL
-    private let queue: DispatchQueue
-    private let inputStream: InputStream
+    let url: URL
+    let queue: DispatchQueue
+    let inputStream: InputStream
 
     init(url: URL, queue: DispatchQueue, delegate: StreamDelegate) {
         assert(url.isFileURL)
@@ -38,6 +37,9 @@ final class FileFetcherStream: InputStream {
     }
     deinit {
         close()
+    #if UNIT_TESTING
+        NotificationCenter.default.post(name: FetcherDeinit, object: nil, userInfo: [FetcherURL: url])
+    #endif
     }
 
     override var delegate: StreamDelegate? {

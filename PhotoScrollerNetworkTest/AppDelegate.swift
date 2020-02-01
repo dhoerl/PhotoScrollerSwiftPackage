@@ -17,6 +17,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     private var fileFetcher: FileFetcherStream?
     private var webFetcher: WebFetcherStream?
     private var mySubscriber: AnyCancellable?
+    private var data = Data()
 
 // private lazy var  pmC = NWPathMonitor(requiredInterfaceType: .cellular)
 // private lazy var  pmW = NWPathMonitor(requiredInterfaceType: .wifi)
@@ -79,12 +80,24 @@ extension AppDelegate: StreamDelegate {
         let url = URL(fileURLWithPath: path)
 
         mySubscriber = AssetFetcher(url: url)
-                        .sink(receiveCompletion: { (error) in
-                            print("SINK ERROR:", error)
+                        .sink(receiveCompletion: { (completion) in
+                            switch completion {
+                            case .finished:
+                                print("SUCCESS:", self.data.count, UIImage(data: self.data) ?? "WTF")
+                            case .failure(let error):
+                                print("ERROR:", error)
+                            }
+                            DispatchQueue.main.async {
+                                self.mySubscriber = nil
+                            }
                         },
                         receiveValue: { (data) in
-                            print("SINK: got data:", data.count)
+                            //print("SINK: got data:", data.count)
+                            self.data.append(data)
                         })
+//DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+//    self.mySubscriber?.cancel()
+//}
 
     }
 

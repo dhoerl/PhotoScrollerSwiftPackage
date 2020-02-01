@@ -15,7 +15,8 @@ private let domain = "com.WebFetcherStream"
  public enum Status : UInt { case notOpen opening open reading writing atEnd closed error
 */
 
-// Another subclass: https://gist.github.com/khanlou/b5e07f963bedcb6e0fcc5387b46991c3
+// Good blog on subclassing NSInputStream: http://khanlou.com/2018/11/streaming-multipart-requests/
+// Code: https://gist.github.com/khanlou/b5e07f963bedcb6e0fcc5387b46991c3
 
 @objcMembers
 final class WebFetcherStream: InputStream {

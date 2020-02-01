@@ -10,18 +10,20 @@ import Foundation
 import Combine
 
 
-//https://www.avanderlee.com/swift/custom-combine-publisher/ TOO COMPLICATED
+// https://www.avanderlee.com/swift/custom-combine-publisher/ TOO COMPLICATED
 // https://ruiper.es/2019/08/05/custom-publishers-part1/ Two parts!
+// https://www.cocoawithlove.com/blog/twenty-two-short-tests-of-combine-part-1.html
+
 
 private func LOG(_ items: Any..., separator: String = " ", terminator: String = "\n") {
 #if DEBUG
-        print("ASSET: " + items.map{String(describing: $0)}.joined(separator: separator), terminator: terminator)
+    // print("ASSET: " + items.map{String(describing: $0)}.joined(separator: separator), terminator: terminator)
 #endif
 }
 
-private let assetQueue = DispatchQueue(label: "com.AssetFetcher", qos: .userInitiated)
 
 final class AssetFetcher: Publisher {
+    static let assetQueue = DispatchQueue(label: "com.AssetFetcher", qos: .userInitiated)
 
     typealias Output = Data
     typealias Failure = Error
@@ -31,6 +33,11 @@ final class AssetFetcher: Publisher {
     init(url: URL) {
         self.url = url
     }
+    deinit {
+#if UNIT_TESTING
+        NotificationCenter.default.post(name: FetcherDeinit, object: nil, userInfo: [AssetURL: url])
+#endif
+    }
 
     func receive<S>(subscriber: S) where S: Subscriber, Failure == S.Failure, Output == S.Input {
         let subscription = AssetFetcherSubscription(url: url, downstream: subscriber)
@@ -39,11 +46,11 @@ final class AssetFetcher: Publisher {
 
 }
 
-protocol StreamReceive: class {
+private protocol StreamReceive: class {
     func stream(_ aStream: Stream, handle eventCode: Stream.Event)
 }
 
-extension AssetFetcher {
+private extension AssetFetcher {
 
     final class AssetFetcherSubscription<DownStream>: StreamReceive, Subscription where DownStream: Subscriber, DownStream.Input == Data, DownStream.Failure == Error {
 
@@ -53,9 +60,9 @@ extension AssetFetcher {
         private let url: URL
         //private var isFileURL: Bool { url.isFileURL }
         private lazy var streamReceiver: StreamReceiver = StreamReceiver(delegate: self)
-        private lazy var _fileFetcher: FileFetcherStream = FileFetcherStream(url: url, queue: assetQueue, delegate: streamReceiver)
+        private lazy var _fileFetcher: FileFetcherStream = FileFetcherStream(url: url, queue: AssetFetcher.assetQueue, delegate: streamReceiver)
         private lazy var _webFetcher: WebFetcherStream = {
-            WebFetcherStream.startMonitoring(onQueue: assetQueue)
+            WebFetcherStream.startMonitoring(onQueue: AssetFetcher.assetQueue)
             let fetcher = WebFetcherStream(url: url, delegate: streamReceiver)
             return fetcher
         }()
@@ -71,7 +78,14 @@ extension AssetFetcher {
             fetcher.open()
             LOG("INIT")
         }
-
+        deinit {
+LOG("FUCK A BIG DUCK! I GOT DEALLOCED!!!")
+downstream = nil
+fetcher.close()
+#if UNIT_TESTING
+            NotificationCenter.default.post(name: FetcherDeinit, object: nil, userInfo: [AssetURL: url])
+#endif
+        }
         func request(_ demand: Subscribers.Demand) {
             LOG("REQUEST")
             guard let downstream = downstream else { return LOG("FUCKED") }
@@ -101,7 +115,9 @@ if let val = runningDemand.max {
         // downstream = nil
 
         func cancel() {
+LOG("FUCK A BIG DUCK! I GOT CANCELLED!!!")
             downstream = nil
+            fetcher.close()
         }
 
         private func howMuchToRead(request: Int) -> Int {
@@ -117,8 +133,9 @@ if let val = runningDemand.max {
         // MARK: StreamDelegate
 
         func stream(_ aStream: Stream, handle eventCode: Stream.Event) {
+            guard let downstream = downstream else { return }
             guard let stream = aStream as? InputStream else { fatalError() }
-            dispatchPrecondition(condition: .onQueue(assetQueue))
+            dispatchPrecondition(condition: .onQueue(AssetFetcher.assetQueue))
 
             switch eventCode {
             case .openCompleted:
@@ -126,9 +143,9 @@ if let val = runningDemand.max {
             case .endEncountered:
                 LOG("AT END :-)")
                 fetcher.close()
+                downstream.receive(completion: .finished)
             case .hasBytesAvailable:
                 LOG("hasBytesAvailable")
-                guard let downstream = downstream else { return }
                 guard stream.hasBytesAvailable else { return }
 
                 var askLen: Int
@@ -170,7 +187,9 @@ if let val = runningDemand.max {
                     LOG("CACHE \(readLen) bytes!")
                 }
             case .errorOccurred:
-                LOG("WTF!!! Error", stream.streamError!)
+                let err = stream.streamError ?? NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "Unknown Error"])
+                LOG("WTF!!! Error", err)
+                downstream.receive(completion: .failure(err))
             default:
                 LOG("UNEXPECTED \(eventCode)", String(describing: eventCode))
             }
@@ -187,29 +206,10 @@ if let val = runningDemand.max {
         }
 
         func stream(_ aStream: Stream, handle eventCode: Stream.Event) {
-            dispatchPrecondition(condition: .onQueue(assetQueue))
+            dispatchPrecondition(condition: .onQueue(AssetFetcher.assetQueue))
             self.delegate?.stream(aStream, handle: eventCode)
         }
 
     }
 
 }
-
-//struct UIControlPublisher<Control: UIControl>: Publisher {
-//
-//    typealias Output = Control
-//    typealias Failure = Never
-//
-//    let control: Control
-//    let controlEvents: UIControl.Event
-//
-//    init(control: Control, events: UIControl.Event) {
-//        self.control = control
-//        self.controlEvents = events
-//    }
-//
-//    func receive<S>(subscriber: S) where S : Subscriber, S.Failure == UIControlPublisher.Failure, S.Input == UIControlPublisher.Output {
-//        let subscription = UIControlSubscription(subscriber: subscriber, control: control, event: controlEvents)
-//        subscriber.receive(subscription: subscription)
-//    }
-//}
