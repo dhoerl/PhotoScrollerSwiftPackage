@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 52;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -42,6 +42,8 @@
 		DEC3164723D7A607008E17E7 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC3164623D7A607008E17E7 /* Environment.swift */; };
 		DEC3164C23D7A6B9008E17E7 /* MasterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC3164B23D7A6B9008E17E7 /* MasterView.swift */; };
 		DEC3164E23D7A6CA008E17E7 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC3164D23D7A6CA008E17E7 /* DetailView.swift */; };
+		DEE8397123E8789600ECB68E /* PhotoScrollerSwiftPackage in Frameworks */ = {isa = PBXBuildFile; platformFilter = ios; productRef = DEE8397023E8789600ECB68E /* PhotoScrollerSwiftPackage */; };
+		DEE8397323E878AF00ECB68E /* PhotoScrollerSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = DEE8397223E878AF00ECB68E /* PhotoScrollerSwiftPackage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,6 +84,7 @@
 		DEC3164623D7A607008E17E7 /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		DEC3164B23D7A6B9008E17E7 /* MasterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MasterView.swift; sourceTree = "<group>"; };
 		DEC3164D23D7A6CA008E17E7 /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
+		DEE8397423E87C1500ECB68E /* libturbojpeg.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libturbojpeg.a; path = ../Libraries/libturbojpeg.a; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +92,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DEE8397123E8789600ECB68E /* PhotoScrollerSwiftPackage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,6 +100,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DEE8397323E878AF00ECB68E /* PhotoScrollerSwiftPackage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -145,6 +150,7 @@
 				DEC3163123D7A562008E17E7 /* PhotoScrollerNetworkTest */,
 				DEADC67123E47C2700BC8F70 /* PhotoScrollerNetworkTestTests */,
 				DEC3163023D7A562008E17E7 /* Products */,
+				DEE8396F23E8789600ECB68E /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -209,6 +215,14 @@
 			path = ..;
 			sourceTree = "<group>";
 		};
+		DEE8396F23E8789600ECB68E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				DEE8397423E87C1500ECB68E /* libturbojpeg.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -226,6 +240,9 @@
 				DEADC67623E47C2700BC8F70 /* PBXTargetDependency */,
 			);
 			name = PhotoScrollerNetworkTestTests;
+			packageProductDependencies = (
+				DEE8397023E8789600ECB68E /* PhotoScrollerSwiftPackage */,
+			);
 			productName = PhotoScrollerNetworkTestTests;
 			productReference = DEADC67023E47C2700BC8F70 /* PhotoScrollerNetworkTestTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -243,6 +260,9 @@
 			dependencies = (
 			);
 			name = PhotoScrollerNetworkTest;
+			packageProductDependencies = (
+				DEE8397223E878AF00ECB68E /* PhotoScrollerSwiftPackage */,
+			);
 			productName = PhotoScrollerNetworkTest;
 			productReference = DEC3162F23D7A562008E17E7 /* PhotoScrollerNetworkTest.app */;
 			productType = "com.apple.product-type.application";
@@ -543,6 +563,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.dhoerl.PhotoScrollerNetworkTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -563,6 +584,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.dhoerl.PhotoScrollerNetworkTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -601,6 +623,17 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		DEE8397023E8789600ECB68E /* PhotoScrollerSwiftPackage */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotoScrollerSwiftPackage;
+		};
+		DEE8397223E878AF00ECB68E /* PhotoScrollerSwiftPackage */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotoScrollerSwiftPackage;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = DEC3162723D7A562008E17E7 /* Project object */;
 }
