@@ -1,8 +1,8 @@
 //
-//  FileBased.swift
+//  WebBased.swift
 //  PhotoScrollerNetworkTestTests
 //
-//  Created by David Hoerl on 1/31/20.
+//  Created by David Hoerl on 2/2/20.
 //  Copyright © 2020 Self. All rights reserved.
 //
 
@@ -10,34 +10,31 @@ import UIKit
 import XCTest
 import Combine
 
-// Shared with Web tests
-let TestAssetQueue = DispatchQueue(label: "com.AssetFetcher", qos: .userInitiated)
-
+private let LOOP_COUNT = 0
+/* See FileBased:
 let FetcherDeinit = Notification.Name("FetcherDeinit")
 let FetcherURL = "FetcherURL"
 let AssetURL = "AssetURL"
 
-final class ByURL {
-    var streamOwner: InputStream?
-    weak var inputStream: InputStream?
+*/
 
-    var data = Data()
-    var events = 0
-    var image: UIImage?
-    var dealloced = false
-    var error: Error?
-    var name = ""
+private let allUrls = [
+    "https://www.dropbox.com/s/b337y2sn1597sry/Lake.jpg?dl=1",
+    "https://www.dropbox.com/s/wq5ed0z4cwgu8xc/Shed.jpg?dl=1",
+    "https://www.dropbox.com/s/r1vf3irfero2f04/Tree.jpg?dl=1",
+    "https://www.dropbox.com/s/xv4ftt95ud937w4/large_leaves_70mp.jpg?dl=1",
+    "https://www.dropbox.com/s/sbda3z1r0komm7g/Space4.jpg?dl=1",
+    "https://www.dropbox.com/s/w0s5905cqkcy4ua/Space5.jpg?dl=1",
+    "https://www.dropbox.com/s/yx63i2yf8eobrgt/Space6.jpg?dl=1",
+]
 
-    init(streamOwner: InputStream, inputStream: InputStream) {
-        self.streamOwner = streamOwner  // so we can release it
-        self.inputStream = inputStream
-    }
+private func LOG(_ items: Any..., separator: String = " ", terminator: String = "\n") {
+#if DEBUG
+    // print("ASSET: " + items.map{String(describing: $0)}.joined(separator: separator), terminator: terminator)
+#endif
 }
-/* --- */
 
-private let allFiles = ["Coffee", "err_image", "Lake", "large_leaves_70mp", "Shed", "Tree", "Space4", "Space5", "Space6"]
-
-final class FileBased: XCTestCase, StreamDelegate {
+final class WebBased: XCTestCase, StreamDelegate {
 
     private var assetQueue = TestAssetQueue
     private var expectation = XCTestExpectation(description: "")
@@ -49,21 +46,24 @@ final class FileBased: XCTestCase, StreamDelegate {
 //    private var events: [URL: Int] = [:]
 
 //    override func invokeTest() {
-//        for time in 0...3 {
-//            print("FileBased invoking: \(time) times")
+//        for time in 0...10 {
+//            print("WebBased invoking: \(time) times")
 //            super.invokeTest()
 //        }
 //    }
 
+
     override func setUp() {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
         continueAfterFailure = false
 
-        expectation = XCTestExpectation(description: "FileFetchers deinit")
+        // Put setup code here. This method is called before the invocation of each test method in the class.
+        expectation = XCTestExpectation(description: "WebFetchers deinit")
         expectation.assertForOverFulfill = true
+
         self.assetQueue.sync {
-            self.fetchers.removeAll()
+            fetchers.removeAll()
         }
+
 //        // In UI tests it is usually best to stop immediately when a failure occurs.
 //        continueAfterFailure = false
 //
@@ -73,6 +73,8 @@ final class FileBased: XCTestCase, StreamDelegate {
         // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
 
         NotificationCenter.default.addObserver(self, selector: #selector(notification(_:)), name: FetcherDeinit, object: nil)
+
+        AssetFetcher.startMonitoring(onQueue: assetQueue)   // calls WebFetcherStream.startMonitoring
     }
 
     override func tearDown() {
@@ -80,7 +82,7 @@ final class FileBased: XCTestCase, StreamDelegate {
         NotificationCenter.default.removeObserver(self, name: FetcherDeinit, object: nil)
 
         self.assetQueue.sync {
-            self.fetchers.removeAll()
+            fetchers.removeAll()
         }
         expectation = XCTestExpectation(description: "")
     }
@@ -92,43 +94,56 @@ final class FileBased: XCTestCase, StreamDelegate {
                 guard let byURL = self.fetchers[url] else { return }    // Combine uses a fetcher, its not in this array
                 byURL.dealloced = true
                 DispatchQueue.main.async {
+                    LOG("EXPECT1:", byURL.name)
                     self.expectation.fulfill()
                 }
             }
         } else
-        if let _ = note.userInfo?[AssetURL] as? URL {
+        if let url = note.userInfo?[AssetURL] as? URL {
             DispatchQueue.main.async {
+                LOG("EXPECT2:", url.path)
                 self.expectation.fulfill()
             }
         }
 
     }
 
-    func test1SingleFile() {
-        let files = Array(allFiles[0..<1])
-        runTest(files: files)
+    func test99Loop() {
+        for i in 0..<LOOP_COUNT {
+            if i > 0 { tearDown(); sleep(1); setUp() }
+            test3NineUrls()
+            do { tearDown(); sleep(1) }
+            setUp()
+            test6NineCombine()
+
+            print("Finished Loop \(i)")
+        }
     }
 
-    func test2TwoFiles() {
-        let files = Array(allFiles[0..<2])
-        runTest(files: files)
+    func test1SingleUrl() {
+        let urls = Array(allUrls[0..<1])
+        runTest(urls: urls)
     }
 
-    func test3NineFiles() {
-        let files = allFiles
-        runTest(files: files)
+    func test2TwoUrls() {
+        let urls = Array(allUrls[0..<2])
+        runTest(urls: urls)
     }
 
-    private func runTest(files: [String]) {
+    func test3NineUrls() {
+        let urls = allUrls
+        runTest(urls: urls)
+    }
+
+    private func runTest(urls: [String]) {
         var expectedFulfillmentCount = 0
-        for file in files {
+        for path in urls {
             // sadly, some of the fetchers get retained somehow if we don't autorelease...
             autoreleasepool {
-                let path = Bundle.main.path(forResource: file, ofType: "jpg")!
-                let url = URL(fileURLWithPath: path)
-                let fetcher = FileFetcherStream(url: url, queue: assetQueue, delegate: self)
+                let url = URL(string: path)!
+                let fetcher = WebFetcherStream(url: url, delegate: self)
                 let byURL = ByURL(streamOwner: fetcher, inputStream: fetcher.inputStream)
-                byURL.name = file
+                byURL.name = url.path
                 assetQueue.sync {
                     self.fetchers[url] = byURL
                 }
@@ -138,43 +153,39 @@ final class FileBased: XCTestCase, StreamDelegate {
             }
         }
 
-        wait(for: [expectation], timeout: TimeInterval(files.count * 10))
+        wait(for: [expectation], timeout: TimeInterval(urls.count * 20))
 
         var values: [ByURL] = []
         self.assetQueue.sync {
             self.fetchers.values.forEach({ values.append($0) })
         }
         for byURL in values {
+if byURL.image == nil { LOG("NO IMAGE FOR:", byURL.name) }
             XCTAssert( !byURL.data.isEmpty )
-            XCTAssert( byURL.image != nil )
+            XCTAssert(byURL.image != nil)
         }
     }
 
     func test4SingleCombine() {
-        let files = Array(allFiles[0..<1])
-        runTestCombine(files: files)
+        let urls = Array(allUrls[0..<1])
+        runTestCombine(urls: urls)
     }
 
     func test5TwoCombine() {
-        let files = Array(allFiles[0..<2])
-        runTestCombine(files: files)
+         let urls = Array(allUrls[0..<2])
+         runTestCombine(urls: urls)
     }
 
     func test6NineCombine() {
-        let files = allFiles
-        runTestCombine(files: files)
+        let urls = allUrls
+         runTestCombine(urls: urls)
     }
 
-    private func runTestCombine(files: [String]) {
+    private func runTestCombine(urls: [String]) {
         var expectedFulfillmentCount = 0
-        expectation.expectedFulfillmentCount = 1
 
-        for file in files {
-            let path = Bundle.main.path(forResource: file, ofType: "jpg")!
-            let url = URL(fileURLWithPath: path)
-
-            expectedFulfillmentCount += 4   // AssetFetcher, the Subscription, FileFetcher, and the FileFetcher Stream
-            expectation.expectedFulfillmentCount = expectedFulfillmentCount
+        for path in urls {
+            let url = URL(string: path)!
 
             var data = Data()
             let mySubscriber = AssetFetcher(url: url)
@@ -183,11 +194,12 @@ final class FileBased: XCTestCase, StreamDelegate {
                                     case .finished:
                                         XCTAssert(!data.isEmpty)
                                         XCTAssertNotNil(UIImage(data: data))
-                                        //print("SUCCESS:", data.count, UIImage(data: data) ?? "WTF")
+                                        //LOG("SUCCESS:", data.count, UIImage(data: data) ?? "WTF")
                                     case .failure(let error):
-                                        print("ERROR:", error)
+                                        LOG("ERROR:", error)
                                     }
                                     DispatchQueue.main.async {
+                                        LOG("EXPECT3:", path)
                                         self.expectation.fulfill()
                                     }
                                 },
@@ -195,16 +207,20 @@ final class FileBased: XCTestCase, StreamDelegate {
                                     data.append(d)
                                 })
             subscribers[url] = mySubscriber
+
+            expectedFulfillmentCount += 3   // two classes and the final Subcriber block
+            expectation.expectedFulfillmentCount = expectedFulfillmentCount
         }
 
-        wait(for: [expectation], timeout: TimeInterval(files.count * 10))
+        wait(for: [expectation], timeout: TimeInterval(urls.count * 10))
     }
+
 
     @objc
     func stream(_ aStream: Stream, handle eventCode: Stream.Event) {
         dispatchPrecondition(condition: .onQueue(assetQueue))
         guard let stream = aStream as? InputStream else { fatalError() }
-        guard let byURL = fetchers.values.first(where: { $0.inputStream === stream }) else { return print("Errant message type \(eventCode.rawValue)") }
+        guard let byURL = fetchers.values.first(where: { $0.inputStream === stream }) else { return LOG("Errant message type \(eventCode.rawValue)") }
         //let fetcher = byURL.fetcher
 
         byURL.events += 1
@@ -215,7 +231,7 @@ final class FileBased: XCTestCase, StreamDelegate {
             XCTAssertEqual(byURL.events, 1)
         case .endEncountered:
             byURL.image = UIImage(data: byURL.data)
-assert(byURL.image != nil)
+            XCTAssert(byURL.image != nil)
             closeStream = true
         case .hasBytesAvailable:
             guard stream.hasBytesAvailable else { return }
@@ -233,33 +249,33 @@ assert(byURL.image != nil)
                 }
             }
             let bytes = UnsafeMutablePointer<UInt8>.allocate(capacity: askLen)
-            //let has0 = stream.hasBytesAvailable
             let readLen = stream.read(bytes, maxLength: askLen)
             if readLen > 0 {
                 byURL.data.append(bytes, count: readLen)
             } else {
-                // NSInputStream says it has bytes, but when we try to read them, it now claims "OOPS - thought I had some"
-                //print("READ==0: ask:", askLen, "HAS BYTES:", stream.hasBytesAvailable, "HAD:", has0)
+                LOG("WTF!")
             }
         case .errorOccurred:
             aStream.close()
             if let error = aStream.streamError {
                 byURL.error = error
-                print("WTF!!! Error:", error)
+                LOG("WTF!!! Error:", error)
             } else {
-                print("ERROR BUT NO STREAM ERROR!!!")
+                LOG("ERROR BUT NO STREAM ERROR!!!")
             }
             closeStream = true
         default:
-            print("UNEXPECTED \(eventCode)", String(describing: eventCode))
+            LOG("UNEXPECTED \(eventCode)", String(describing: eventCode))
             XCTAssert(false)
         }
         if closeStream {
-            stream.close()
+            byURL.streamOwner?.close()
             DispatchQueue.main.async {
+                XCTAssert(byURL.image != nil)
+                LOG("IMAGE FOR NAME:", byURL.name)
                 byURL.streamOwner = nil
-//print("byURL.streamOwner nil?:", byURL.streamOwner == nil, "URL:", byURL.name)
-//                print(eventCode == .endEncountered ? "AT END :-)" : "ERROR")
+                //LOG(eventCode == .endEncountered ? "AT END :-)" : "ERROR")
+LOG("EXPECT4:", byURL.name)
                 self.expectation.fulfill()
             }
         }

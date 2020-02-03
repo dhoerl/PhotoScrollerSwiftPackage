@@ -22,10 +22,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if orientation.isLandscape && bounds.size.height > 1000 {
             if appEnvironment.useSideBySide == false {
                 appEnvironment.useSideBySide = true
-                print("SIDE changed to TRUE")
+                //print("SIDE changed to TRUE")
             }
         } else if orientation.isPortrait && appEnvironment.useSideBySide == true {
-            print("SIDE changed to false")
+            //print("SIDE changed to false")
             appEnvironment.useSideBySide = false
         }
     }

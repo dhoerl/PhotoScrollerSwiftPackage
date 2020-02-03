@@ -28,10 +28,10 @@ final class WebFetcherStream: InputStream {
 
     // Must be called prior to instantiating any objects
     static func startMonitoring(onQueue: DispatchQueue) {
+        guard queue == DispatchQueue.main else { return }   // Mostly a Unit Testing issue
         queue = onQueue
         let _ = monitor
     }
-
     static private var queue = DispatchQueue.main   // will crash if not set to something else
 
     static private let monitor: NWPathMonitor = {
@@ -61,6 +61,8 @@ final class WebFetcherStream: InputStream {
         return URLSession(configuration: config, delegate: sessionDelegate, delegateQueue: operationQueue)
     }()
 
+    var inputStream: InputStream { self }
+
     private let url: URL
     private weak var _delegate: StreamDelegate?     // must do this because InputStream subclasses don't have a 'delegate' property (try to use it, crash and burn!)
 
@@ -81,10 +83,21 @@ final class WebFetcherStream: InputStream {
         super.init(data: Data())
     }
     deinit {
-        close()
+        close() // just to be sure!
 #if UNIT_TESTING
         NotificationCenter.default.post(name: FetcherDeinit, object: nil, userInfo: [FetcherURL: url])
 #endif
+    }
+
+    // Insure we get removed from Self.tasks
+    func closeDataTask() {
+        guard let dataTask = dataTask else { return }
+
+        dataTask.cancel()
+        Self.queue.async {
+            Self.tasks[dataTask.taskIdentifier] = nil
+            self.dataTask = nil // this should be the only place this is done!
+        }
     }
 
 }
@@ -100,6 +113,8 @@ extension WebFetcherStream {
 
     static func cancelTask(_ dataTask: URLSessionDataTask, statusCode: Int) {
         guard let fetcher = Self.tasks[dataTask.taskIdentifier], let delegate = fetcher.delegate, let stream = delegate.stream  else { return }
+
+        fetcher.closeDataTask()
 
         fetcher._streamStatus = .error
         fetcher._streamError = NSError(domain: domain, code: statusCode, userInfo:[ NSLocalizedDescriptionKey: "Failed to connect: statusCode \(statusCode)"])
@@ -124,6 +139,8 @@ extension WebFetcherStream {
 
     static func completeFromTask(_ dataTask: URLSessionDataTask, error: Error?) {
         guard let fetcher = Self.tasks[dataTask.taskIdentifier], let delegate = fetcher.delegate, let stream = delegate.stream  else { return }
+
+        fetcher.closeDataTask()
 
         if let error = error {
             fetcher._streamStatus = .error
@@ -173,13 +190,7 @@ extension WebFetcherStream {
         _streamStatus = .closed
         delegate = nil
 
-        if let dataTask = dataTask, dataTask.state == .running {
-            dataTask.cancel()
-            Self.queue.async {
-                Self.tasks[dataTask.taskIdentifier] = nil
-                self.dataTask = nil
-            }
-        }
+        closeDataTask()
     }
 
     override var streamStatus: Stream.Status {

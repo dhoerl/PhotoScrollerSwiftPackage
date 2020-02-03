@@ -46,13 +46,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 //    } )
 //}
 //pmW.start(queue: assetQueue)
-
+#if UNIT_TESTING
+#else
         //fileTest()
         //combineFileTest()
 
+        //AssetFetcher.startMonitoring(onQueue: assetQueue)
         //webTest()
-        combineWebTest()
-
+        //combineWebTest()
+#endif
 
         return true
     }
@@ -140,8 +142,6 @@ extension AppDelegate: StreamDelegate {
     }
 
     func webTest() {
-        WebFetcherStream.startMonitoring(onQueue: assetQueue)
-
         let url = URL(string: "https://www.dropbox.com/s/b337y2sn1597sry/Lake.jpg?dl=1")!
 
         webFetcher = WebFetcherStream(url: url, delegate: self) // uses assetQueue
@@ -156,6 +156,7 @@ extension AppDelegate: StreamDelegate {
         case .openCompleted:
             print("OPEN COMPLETED")
         case .endEncountered:
+            aStream.close()
             print("AT END :-)")
 
             DispatchQueue.main.async {

@@ -32,6 +32,7 @@
 		DEADC68723E47EBA00BC8F70 /* AssetFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADC62523DCE16100BC8F70 /* AssetFetcher.swift */; };
 		DEADC68823E47EBA00BC8F70 /* FileFetcherStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADC62723DDE66300BC8F70 /* FileFetcherStream.swift */; };
 		DEADC68923E47EBA00BC8F70 /* WebFetcherStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADC63C23DF905300BC8F70 /* WebFetcherStream.swift */; };
+		DEADC68C23E722F300BC8F70 /* WebBased.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADC68B23E722F300BC8F70 /* WebBased.swift */; };
 		DEC3163323D7A562008E17E7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC3163223D7A562008E17E7 /* AppDelegate.swift */; };
 		DEC3163523D7A562008E17E7 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC3163423D7A562008E17E7 /* SceneDelegate.swift */; };
 		DEC3163723D7A562008E17E7 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC3163623D7A562008E17E7 /* ContentView.swift */; };
@@ -69,6 +70,7 @@
 		DEADC67023E47C2700BC8F70 /* PhotoScrollerNetworkTestTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PhotoScrollerNetworkTestTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DEADC67223E47C2700BC8F70 /* FileBased.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBased.swift; sourceTree = "<group>"; };
 		DEADC67423E47C2700BC8F70 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DEADC68B23E722F300BC8F70 /* WebBased.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebBased.swift; sourceTree = "<group>"; };
 		DEC3162F23D7A562008E17E7 /* PhotoScrollerNetworkTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhotoScrollerNetworkTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DEC3163223D7A562008E17E7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		DEC3163423D7A562008E17E7 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -130,8 +132,9 @@
 		DEADC67123E47C2700BC8F70 /* PhotoScrollerNetworkTestTests */ = {
 			isa = PBXGroup;
 			children = (
-				DEADC67223E47C2700BC8F70 /* FileBased.swift */,
 				DEADC67423E47C2700BC8F70 /* Info.plist */,
+				DEADC67223E47C2700BC8F70 /* FileBased.swift */,
+				DEADC68B23E722F300BC8F70 /* WebBased.swift */,
 			);
 			path = PhotoScrollerNetworkTestTests;
 			sourceTree = "<group>";
@@ -327,6 +330,7 @@
 			files = (
 				DEADC68723E47EBA00BC8F70 /* AssetFetcher.swift in Sources */,
 				DEADC67323E47C2700BC8F70 /* FileBased.swift in Sources */,
+				DEADC68C23E722F300BC8F70 /* WebBased.swift in Sources */,
 				DEADC68923E47EBA00BC8F70 /* WebFetcherStream.swift in Sources */,
 				DEADC68823E47EBA00BC8F70 /* FileFetcherStream.swift in Sources */,
 			);

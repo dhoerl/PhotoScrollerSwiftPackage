@@ -9,6 +9,8 @@
 import Foundation
 import Combine
 
+// TOD: could offer an option to cache the file, and on subsequent fetches use the cache - NSCache etc
+
 
 // https://www.avanderlee.com/swift/custom-combine-publisher/ TOO COMPLICATED
 // https://ruiper.es/2019/08/05/custom-publishers-part1/ Two parts!
@@ -23,7 +25,8 @@ private func LOG(_ items: Any..., separator: String = " ", terminator: String = 
 
 
 final class AssetFetcher: Publisher {
-    static let assetQueue = DispatchQueue(label: "com.AssetFetcher", qos: .userInitiated)
+    static var assetQueue = DispatchQueue.main
+    static var _assetQueue: DispatchQueue { DispatchQueue(label: "com.AssetFetcher", qos: .userInitiated) }
 
     typealias Output = Data
     typealias Failure = Error
@@ -37,6 +40,13 @@ final class AssetFetcher: Publisher {
 #if UNIT_TESTING
         NotificationCenter.default.post(name: FetcherDeinit, object: nil, userInfo: [AssetURL: url])
 #endif
+    }
+
+    // Must be called prior to instantiating any objects
+    static func startMonitoring(onQueue: DispatchQueue?) {
+        guard assetQueue == DispatchQueue.main else { return }   // Mostly a Unit Testing issue
+        assetQueue = onQueue ?? _assetQueue
+        WebFetcherStream.startMonitoring(onQueue: assetQueue)
     }
 
     func receive<S>(subscriber: S) where S: Subscriber, Failure == S.Failure, Output == S.Input {
@@ -58,7 +68,6 @@ private extension AssetFetcher {
 
         private var downstream: DownStream? // optional so we can nil it on cancel
         private let url: URL
-        //private var isFileURL: Bool { url.isFileURL }
         private lazy var streamReceiver: StreamReceiver = StreamReceiver(delegate: self)
         private lazy var _fileFetcher: FileFetcherStream = FileFetcherStream(url: url, queue: AssetFetcher.assetQueue, delegate: streamReceiver)
         private lazy var _webFetcher: WebFetcherStream = {
@@ -101,13 +110,6 @@ private extension AssetFetcher {
 
                 savedData.removeSubrange(range)
                 let _ = downstream.receive(data)
-//if let val = fuck.max {
-//    LOG("FUCK VAL:", val)
-//} else { LOG("FUCK IS INFINITE!") }
-//
-//if let val = runningDemand.max {
-//    LOG("runningDemand VAL:", val)
-//} else { LOG("runningDemand IS INFINITE!") }
             }
         }
 
@@ -183,6 +185,7 @@ private extension AssetFetcher {
                     LOG("stream.cache\(readLen) bytes")
                 }
             case .errorOccurred:
+                fetcher.close()
                 let err = stream.streamError ?? NSError(domain: "com.AssetFetcher", code: 0, userInfo: [NSLocalizedDescriptionKey: "Unknown Error"])
                 LOG("stream.error=\(err)")
                 downstream.receive(completion: .failure(err))
