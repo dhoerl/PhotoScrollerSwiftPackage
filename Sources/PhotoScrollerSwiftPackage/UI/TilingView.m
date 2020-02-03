@@ -10,14 +10,14 @@
  * ConcurrentOp from my ConcurrentOperations github sample code, and TiledImageBuilder
  * was completely original source code developed by me.
  *
- * Copyright 2012-2019 David Hoerl All Rights Reserved.
+ * Copyright 2012-2020 David Hoerl All Rights Reserved.
  *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #import <QuartzCore/CATiledLayer.h>
 
 #import "PhotoScrollerCommon.h"
-#import "UI/TilingView.h"
+#import "TilingView.h"
 #import "ImageDecoding/TiledImageBuilder.h"
 
 #define LOG NSLog

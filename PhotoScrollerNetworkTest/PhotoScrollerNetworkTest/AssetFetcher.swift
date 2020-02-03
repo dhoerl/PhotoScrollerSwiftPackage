@@ -9,7 +9,8 @@
 import Foundation
 import Combine
 
-// TOD: could offer an option to cache the file, and on subsequent fetches use the cache - NSCache etc
+// TODO: progress object (instead of data, struct with max, current progress etc)
+// TODO: could offer an option to cache the file, and on subsequent fetches use the cache - NSCache etc
 
 
 // https://www.avanderlee.com/swift/custom-combine-publisher/ TOO COMPLICATED

@@ -10,7 +10,7 @@
  * ConcurrentOp from my ConcurrentOperations github sample code, and TiledImageBuilder
  * was completely original source code developed by me.
  *
- * Copyright 2012-2019 David Hoerl All Rights Reserved.
+ * Copyright 2012-2020 David Hoerl All Rights Reserved.
  *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *
@@ -41,7 +41,9 @@
  *    88          88  888888  888888
  *
  */
- 
+
+@import UIKit;
+
 #import "PhotoScrollerCommon.h"
  
 @interface TiledImageBuilder : NSOutputStream
@@ -71,7 +73,7 @@
 @interface TiledImageBuilder (Draw)
 
 - (CGImageRef)newImageForScale:(CGFloat)scale location:(CGPoint)pt box:(CGRect)box;
-- (UIImage *)tileForScale:(CGFloat)scale location:(CGPoint)pt; // used when doing drawRect, but now for getImageColor
+- (UIImage *)tileForScale:(CGFloat)scale location:(CGPoint)pt; // used when doing drawRect, and now for getImageColor ???
 - (CGAffineTransform)transformForRect:(CGRect)box; //  scale:(CGFloat)scale;
 - (CGPoint)translateTileForScale:(CGFloat)scale location:(CGPoint)origPt;
 
@@ -114,4 +116,3 @@
  @end
 
 */
- */

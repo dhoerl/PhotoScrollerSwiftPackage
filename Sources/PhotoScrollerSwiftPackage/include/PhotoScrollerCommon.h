@@ -10,11 +10,10 @@
 * ConcurrentOp from my ConcurrentOperations github sample code, and TiledImageBuilder
 * was completely original source code developed by me.
 *
-* Copyright 2012-2019 David Hoerl All Rights Reserved.
+* Copyright 2012-2020 David Hoerl All Rights Reserved.
 *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-@import UIKit;
 
 #define ZOOM_LEVELS			  4
 #define TILE_SIZE			256		// could make larger or smaller, but power of 2

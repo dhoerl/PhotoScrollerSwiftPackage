@@ -10,7 +10,7 @@
  * ConcurrentOp from my ConcurrentOperations github sample code, and TiledImageBuilder
  * was completely original source code developed by me.
  *
- * Copyright 2012-2019 David Hoerl All Rights Reserved.
+ * Copyright 2012-2020 David Hoerl All Rights Reserved.
  *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -19,6 +19,8 @@
 //#define MMAP_DEBUGGING			0		// set to 1 to see how mmap/munmap working
 //#define MAPPING_IMAGES			0		// set to 1 to use MMAP for image tile retrieval - if 0 use pread
 //#define LEVELS_INIT				0		// set to 1 if you want to specify the levels in the init method instead of using the target view size
+
+@import Foundation;
 
 #include <libkern/OSAtomic.h>
 
