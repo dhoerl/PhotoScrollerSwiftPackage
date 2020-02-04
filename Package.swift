@@ -27,9 +27,13 @@ let package = Package(
             dependencies: [],
             exclude: [
                 "PhotoScrollerNetworkTest",
+                // These are all links solely to make development easier
+                "ImageDecoding/TiledImageBuilder.h",
                 "ImageDecoding/TiledImageBuilder+Draw.h",
                 "ImageDecoding/TiledImageBuilder+JPEG.h",
                 "ImageDecoding/TiledImageBuilder+Tile.h",
+                "UI/TilingView.h",
+                "UI/ImageScrollView.h",
             ]
         )
             //,
