@@ -14,6 +14,8 @@
  *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#import <stdatomic.h>
+
 #import "PhotoScrollerCommon.h"
 
 #import "ImageDecoding/TiledImageBuilder-Private.h"

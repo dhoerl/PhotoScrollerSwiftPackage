@@ -481,7 +481,10 @@ static void term_source(j_decompress_ptr cinfo);
 			if(src_mgr->jpegFailed) self.failed = YES;
 		}
 		if(src_mgr->got_header && !self.failed) {
-			[self jpegOutputScanLines];
+			BOOL ret = [self jpegOutputScanLines];
+            if(ret && !self.failed) {
+                self.finished = YES;
+            }
 			
 			// When we consume all the data in the web buffer, safe to free it up for the system to resuse
 			if(src_mgr->pub.bytes_in_buffer == 0) {

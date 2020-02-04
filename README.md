@@ -11,13 +11,10 @@ Feb 1, 2020 : Working on this almost full time. Focused on a test app that will 
   Very happy how it progressing, but its taking a lot more time than the original code took (I did most 
   of that in a weekend, believe it or not, but I was a lot younger then too!)
 
+Feb 3, 2020: Web based tests done and all passing - even hundreds of them. This 
+  took an amazing amount of time and effort to get right. Networking on different threads
+  is never easy.
 
-
-1) Add the Package using Xcode->File->Packages with the URL of https://github.com/dhoerl/PhotoScrollerSwiftPackage
-
-2) Open the Build Phases, and in the Package shown in the left file pane, drag the Libraries/libturbojpeg.a file into the link
-   section. It will appear just above the PhotoScrollerSwiftPackage that should already be there
-
-3) In Build settings, under library search paths, add:
-   "$(BUILD_DIR)/../../SourcePackages/checkouts/PhotoScrollerSwiftPackage/Libraries"
-
+Feb 4, 2020: The image decoding section is now coded, and at least passed the first unit test!
+ The image contruction interface is an NSOutputStream - coded it to accept a delegate but it 
+ really looks like that may not be needed, since it will consume as much data as you throw at it.

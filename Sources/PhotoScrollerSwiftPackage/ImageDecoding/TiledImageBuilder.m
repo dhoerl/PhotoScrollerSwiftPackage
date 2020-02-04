@@ -60,7 +60,7 @@ static BOOL dump_memory_usage(struct task_basic_info *info);
 //static BOOL tileBuilder(imageMemory *im, BOOL useMMAP, int32_t ubc_thresh);
 
 // Create one and use it everywhere
-static CGColorSpaceRef		colorSpace;
+static CGColorSpaceRef colorSpace;
 
 // Compliments to Rainer Brockerhoff
 static uint64_t DeltaMAT(uint64_t then, uint64_t now)
@@ -87,7 +87,7 @@ static void foo(int sig)
 
 /*
  * We use a dispatch_grpoup so we can "block" on access to it, when memory pressure looks high.
- * A heuritc is empployed: the max of some percentage of free memory or a lower percentage of all memory
+ * A heuritc is employed: the max of some percentage of free memory or a lower percentage of all memory
  * The queue is simply used as a place to attach the group to - you cannot suspend or resume a group
  * The suspended flag sets and resets the current queue state.
  * When a file is sync'd to disk, usage goes up by its size, and decremented when the sync is complete.
@@ -102,11 +102,17 @@ static dispatch_queue_t		fileFlushQueue;
 static dispatch_group_t		fileFlushGroup;
 static float				ubc_threshold_ratio;
 
-
 @implementation TiledImageBuilder
 {
-	NSString	*_imagePath;
-	BOOL		mapWholeFile;
+    __weak NSObject<NSStreamDelegate> *delegate;
+
+    NSString            *_imagePath;
+    BOOL                mapWholeFile;
+    NSMutableData       *bufferedData;
+    NSStreamStatus      _streamStatus;
+    NSError             *_streamError;
+    BOOL                _hasSpaceAvailable;
+    dispatch_queue_t    delegateQueue;
 }
 + (void)initialize
 {
@@ -115,7 +121,7 @@ static float				ubc_threshold_ratio;
 
 		fileFlushQueue = dispatch_queue_create("com.dfh.TiledImageBuilder", DISPATCH_QUEUE_SERIAL);
 		fileFlushGroup = dispatch_group_create();
-		ubc_threshold_ratio = 0.5f;	// default ration - can override with class method below
+		ubc_threshold_ratio = 1.0f;	// default ration - can override with class method below
 		//for(int i=0; i<=31; ++i) signal(i, foo);	// trying to find out why system was killing me - never did
 	}
 }
@@ -138,17 +144,26 @@ static float				ubc_threshold_ratio;
 	return fileFlushGroup;
 }
 
-#if LEVELS_INIT == 0
+- (void)setFailed:(BOOL)failed {
+    _failed = failed;
+    assert(!_failed);
+}
 
-- (id)initForNetworkDownloadWithSize:(CGSize)sz orientation:(NSInteger)orient
+
+
+#if LEVELS_INIT == 0
+- (instancetype)initWithSize:(CGSize)sz orientation:(NSInteger)orient queue:(dispatch_queue_t)queue delegate:(NSObject<NSStreamDelegate> *)del
 {
 	if((self = [self initWithSize:sz])) {
 		_orientation = orient;
-		[self jpegInitNetwork];
+        delegateQueue = queue;
+        delegate = del;
+        bufferedData = [NSMutableData new];
+        _streamStatus = NSStreamStatusNotOpen;
 	}
 	return self;
 }
-- (id)initWithSize:(CGSize)sz
+- (instancetype)initWithSize:(CGSize)sz
 {
 	if((self = [super init])) {
 #if TIMING_STATS == 1 && !defined(NDEBUG)
@@ -167,7 +182,6 @@ static float				ubc_threshold_ratio;
 		//LOG(@"A: freeThresh=%lf totalThresh=%lf ubc_thresh=%u", (freeThresh), (totalThresh), ubc_threshold);
 		//LOG(@"B: freeThresh=%d totalThresh=%d ubc_thresh=%d", (int)(freeThresh/(1024*1024)), (int)(totalThresh/(1024*1024)), (int)(_ubc_threshold/(1024*1024)));
 
-#warning Hmmm what to do with this
 		//[[NSNotificationCenter defaultCenter] addObserver:self selector: @selector(lowMemory:) name:UIApplicationDidReceiveMemoryWarningNotification object:[UIApplication sharedApplication]];
 	}
 	return self;
@@ -175,15 +189,17 @@ static float				ubc_threshold_ratio;
 
 #else
 
-- (id)initForNetworkDownloadWithLevels:(NSUInteger)levels orientation:(NSInteger)orient
+- (instancetype)initWithLevels:(NSUInteger)levels orientation:(NSInteger)orient queue:(dispatch_queue_t)queue delegate:(NSStreamDelegate *)del
 {
 	if((self = [self initWithLevels:levels])) {
 		_orientation = orient;
-		[self jpegInitNetwork];
+        delegateQueue = queue;
+        delegate = del;
+        bufferedData = [NSMutableData new];
 	}
 	return self;
 }
-- (id)initWithLevels:(NSUInteger)levels
+- (instancetype)initWithLevels:(NSUInteger)levels
 {
 	if((self = [super init])) {
 #if TIMING_STATS == 1 && !defined(NDEBUG)
@@ -201,8 +217,7 @@ static float				ubc_threshold_ratio;
 
 		src_mgr				= calloc(1, sizeof(co_jpeg_source_mgr));
 		//LOG(@"freeThresh=%d totalThresh=%d ubc_thresh=%d", (int)freeThresh/(1024*1024), (int)totalThresh/(1024*1024), (int)ubc_threshold/(1024*1024));
-
-		[[NSNotificationCenter defaultCenter] addObserver:self selector: @selector(lowMemory:) name:UIApplicationDidReceiveMemoryWarningNotification object:[UIApplication sharedApplication]];
+		//[[NSNotificationCenter defaultCenter] addObserver:self selector: @selector(lowMemory:) name:UIApplicationDidReceiveMemoryWarningNotification object:[UIApplication sharedApplication]];
 	}
 	return self;
 }
@@ -257,53 +272,6 @@ LOG(@"ZLEVELS=%d", zLevels);
 		assert(ret == 1);
 		if(ret != 1) _failed = YES;
 	}
-}
-
-- (void)dataFinished
-{
-	if(!_failed) {
-		_startTime = [self timeStamp];
-
-		fclose(_imageFile); _imageFile = NULL;
-		[self decodeImageURL:[NSURL fileURLWithPath:_imagePath]];
-		unlink([_imagePath fileSystemRepresentation]); _imagePath = NULL;
-		
-#if TIMING_STATS == 1 && !defined(NDEBUG)
-		_finishTime = [self timeStamp];
-		_milliSeconds = (uint32_t)DeltaMAT(_startTime, _finishTime);
-		LOG(@"FINISH: %u milliseconds", _milliSeconds);
-#endif
-#if MEMORY_DEBUGGING == 1
-		[self freeMemory:@"dataFinished"];
-#endif
-	}
-}
-
-- (void)decodeImageURL:(NSURL *)url
-{
-	//LOG(@"URL=%@", url);
-	NSData *data = [NSData dataWithContentsOfURL:url];
-	[self decodeImageData:data];
-}
-
-- (BOOL)createImageFile
-{
-	BOOL success;
-	int fd = [self createTempFile:NO size:0];
-	if(fd == -1) {
-		_failed = YES;
-		success = NO;
-	} else {
-		if ((_imageFile = fdopen(fd, "r+")) == NULL) {
-			LOG(@"Error: failed to fdopen image file \"%@\" for \"r+\" (%d).", _imagePath, errno);
-			close(fd);
-			_failed = YES;
-			success = NO;
-		} else {
-			success = YES;
-		}
-	}
-	return success;
 }
 
 - (int)createTempFile:(BOOL)unlinkFile size:(size_t)sz
@@ -582,3 +550,67 @@ static BOOL dump_memory_usage(struct task_basic_info *info) {
   kern_return_t kerr = task_info( mach_task_self(), TASK_BASIC_INFO, (task_info_t)info, &size );
   return ( kerr == KERN_SUCCESS );
 }
+
+@implementation TiledImageBuilder (NSStreamDelegate)
+
+- (NSInteger)write:(const uint8_t *)buffer maxLength:(NSUInteger)len {
+    if(len == 0 || _streamStatus != NSStreamStatusOpen) { return 0; }
+    _streamStatus = NSStreamStatusWriting;
+
+    // We need to get enough to decompress the header. If its not enought, buffer the data
+    NSData *data;
+    NSData *thisData = [[NSData alloc] initWithBytes:buffer length:len];
+    if([bufferedData length]) {
+        [bufferedData appendData:thisData];
+        data = bufferedData;
+    } else {
+        data = thisData;
+    }
+
+    BOOL consumed = [self jpegAdvance:data];
+    if(consumed) {
+        [bufferedData setLength:0];
+    } else {
+        if([bufferedData length] == 0) {
+            [bufferedData appendData:thisData];
+        }
+    }
+    if(self.failed) {
+        _streamStatus = NSStreamStatusError;
+    } else
+    if(self.finished) {
+        _streamStatus = NSStreamStatusAtEnd;
+    } else {
+        _streamStatus = NSStreamStatusOpen;
+    }
+}
+
+
+- (void)open {
+    [self jpegInitNetwork];
+    _streamStatus = NSStreamStatusOpen;
+}
+
+- (void)close {
+    if( _streamStatus != NSStreamStatusOpen) { return; }
+    _streamStatus = NSStreamStatusClosed;
+}
+
+- (nullable id)propertyForKey:(NSStreamPropertyKey)key { return nil; }
+- (BOOL)setProperty:(nullable id)property forKey:(NSStreamPropertyKey)key { }
+
+- (void)scheduleInRunLoop:(NSRunLoop *)aRunLoop forMode:(NSRunLoopMode)mode { return nil; }
+- (void)removeFromRunLoop:(NSRunLoop *)aRunLoop forMode:(NSRunLoopMode)mode { return nil; }
+
+- (BOOL)hasSpaceAvailable {
+    return _hasSpaceAvailable;
+}
+
+- (NSStreamStatus)streamStatus {
+    return _streamStatus;
+}
+- (NSError *)streamError {
+    return _streamError;
+}
+
+@end

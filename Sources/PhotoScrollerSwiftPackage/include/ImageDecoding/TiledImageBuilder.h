@@ -45,7 +45,9 @@
 @import UIKit;
 
 #import "PhotoScrollerCommon.h"
- 
+
+NS_ASSUME_NONNULL_BEGIN
+
 @interface TiledImageBuilder : NSOutputStream
 @property (nonatomic, strong, readonly) NSDictionary *properties;	// image properties from CGImageSourceCopyPropertiesAtIndex()
 @property (nonatomic, assign) NSInteger orientation;				// 0 == automatically set using EXIF orientation from image
@@ -54,19 +56,22 @@
 @property (nonatomic, assign) uint64_t finishTime;					// time stamp of when this operation finished  decoding
 @property (nonatomic, assign) uint32_t milliSeconds;				// elapsed time
 @property (nonatomic, assign) int32_t ubc_threshold;				// UBC threshold above which outstanding writes are flushed to the file system (dynamic default)
-@property (nonatomic, assign, readonly) BOOL failed;				// global Error flags
+@property (nonatomic, assign, readonly) BOOL failed;                // global Error flags
+@property (nonatomic, assign, readonly) BOOL finished;              // image was successfully decoded!
 
 + (void)setUbcThreshold:(float)val;									// default is 0.5 - Image disk cache can use half of the available free memory pool
 
+
 #if LEVELS_INIT == 0
-- (id)initForNetworkDownloadWithSize:(CGSize)sz orientation:(NSInteger)orientation;
+- (instancetype)initWithSize:(CGSize)sz orientation:(NSInteger)orientation queue:(dispatch_queue_t)queue delegate:(NSObject<NSStreamDelegate> *)delegate;
+
 #else
-- (id)initForNetworkDownloadWithLevels:(NSUInteger)levels orientation:(NSInteger)orientation;
+- (instancetype)initWithLevels:(NSUInteger)levels orientation:(NSInteger)orientation queue:(dispatch_queue_t)queue delegate:(NSObject<NSStreamDelegate> *)delegate);
 #endif
 
-- (void)writeToImageFile:(NSData *)data;
-- (void)dataFinished;
-- (CGSize)imageSize;	// orientation modifies over what is downloaded
+- (void)writeToImageFile:(NSData *)data;    // incremental update
+- (void)dataFinished;                       // no more data is coming
+- (CGSize)imageSize;                        // orientation modifies what is downloaded
 
 @end
 
@@ -84,6 +89,8 @@
 - (BOOL)jpegAdvance:(NSData *)data;
 
 @end
+
+NS_ASSUME_NONNULL_END
 
 /*
  @interface MyOutputStream ()
