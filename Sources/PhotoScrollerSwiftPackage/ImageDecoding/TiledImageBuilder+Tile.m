@@ -18,7 +18,7 @@
 
 #import "PhotoScrollerCommon.h"
 
-#import "ImageDecoding/TiledImageBuilder-Private.h"
+#import "TiledImageBuilder-Private.h"
 
 #if 0	// 0 == no debug, 1 == lots of mesages
 #define LOG(...) NSLog(__VA_ARGS__)

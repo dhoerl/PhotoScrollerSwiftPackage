@@ -15,7 +15,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #import "PhotoScrollerCommon.h"
-#import "ImageDecoding/TiledImageBuilder-Private.h"
+#import "../ImageDecoding/TiledImageBuilder-Private.h"
 
 #define LOG NSLog
 
@@ -38,7 +38,7 @@ static void PhotoScrollerProviderReleaseInfoCallback (
 {
 	CGImageRef image = [self newImageForScale:scale location:pt box:CGRectMake(0, 0, 0, 0)];
 	UIImage *img = [UIImage imageWithCGImage:image];
-	CGImageRelease(image);
+	//CGImageRelease(image);
 	return img;
 }
 
@@ -107,7 +107,7 @@ static void PhotoScrollerProviderReleaseInfoCallback (
 	   false,
 	   kCGRenderingIntentPerceptual
 	);
-	CGDataProviderRelease(dataProvider);
+	//CGDataProviderRelease(dataProvider);
 	return image;
 }
 

@@ -18,7 +18,7 @@
 
 #import "PhotoScrollerCommon.h"
 #import "TilingView.h"
-#import "ImageDecoding/TiledImageBuilder.h"
+#import "../ImageDecoding/TiledImageBuilder.h"
 
 #define LOG NSLog
 
@@ -114,7 +114,7 @@ if(CGImageGetWidth(image) == 0 || CGImageGetHeight(image) == 0) {
 	CGContextSetBlendMode(context, kCGBlendModeCopy);	// no blending! from QA 1708
 //if(row==0 && col==0)	
 	CGContextDrawImage(context, box, image);
-	CFRelease(image);
+	//CGImageRelease(image);
 
 	if(self.annotates) {
 		CGContextSetStrokeColorWithColor(context, [[UIColor whiteColor] CGColor]);
@@ -159,10 +159,10 @@ if(CGImageGetWidth(image) == 0 || CGImageGetHeight(image) == 0) {
 	unsigned char *buffer = malloc(4);
 	CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big;
 	CGContextRef context = CGBitmapContextCreate(buffer, 1, 1, 8, 4, colorSpace, bitmapInfo);
-	CGColorSpaceRelease(colorSpace);
+	//CGColorSpaceRelease(colorSpace);
 	CGContextDrawImage(context, CGRectMake(0, 0, 1, 1), imageRef);
-	CGImageRelease(imageRef);
-	CGContextRelease(context);
+	//CGImageRelease(imageRef);
+	//CGContextRelease(context);
 
 	CGFloat d = 255;
 	CGFloat r = buffer[0] / d;

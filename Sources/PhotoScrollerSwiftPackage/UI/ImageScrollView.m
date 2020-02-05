@@ -15,10 +15,10 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #import "PhotoScrollerCommon.h"
-#import "UI/ImageScrollView.h"
-#import "UI/TilingView.h"
+#import "ImageScrollView.h"
+#import "TilingView.h"
 
-#import "ImageDecoding/TiledImageBuilder.h"
+#import "../ImageDecoding/TiledImageBuilder.h"
 
 @implementation ImageScrollView
 {

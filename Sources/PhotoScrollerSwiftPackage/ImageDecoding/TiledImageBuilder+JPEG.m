@@ -15,7 +15,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #import "PhotoScrollerCommon.h"
-#import "ImageDecoding/TiledImageBuilder-Private.h"
+#import "../ImageDecoding/TiledImageBuilder-Private.h"
 
 #define LOG NSLog
 
@@ -60,7 +60,7 @@ static void term_source(j_decompress_ptr cinfo);
 					self.orientation = [[self.properties objectForKey:@"Orientation"] integerValue];
 				}
 			}
-			CFRelease(imageSourcRef);
+			//CFRelease(imageSourcRef);
 		}
 
 #if LEVELS_INIT == 0
@@ -202,7 +202,7 @@ static void term_source(j_decompress_ptr cinfo);
 					NSLog(@"ORIENTATION=%zd string=%@", self.orientation, [self.properties objectForKey:@"Orientation"]);
 				}
 			}
-			CFRelease(imageSourcRef);			
+			//CFRelease(imageSourcRef);
 		}
 
 		src_mgr->cinfo.out_color_space = JCS_EXT_BGRA; // (using JCS_EXT_ABGR below)
@@ -455,7 +455,7 @@ static void term_source(j_decompress_ptr cinfo);
 						self.orientation = [[self.properties objectForKey:@"Orientation"] integerValue];
 					}
 				}
-				CFRelease(imageSourcRef);			
+				//CFRelease(imageSourcRef);			
 			}
 
 			//LOG(@"GOT header");

@@ -15,7 +15,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #import "PhotoScrollerCommon.h"
-#import "ImageDecoding/TiledImageBuilder-Private.h"
+#import "TiledImageBuilder-Private.h"
 
 #define LOG NSLog
 
@@ -431,7 +431,7 @@ LOG(@"ZLEVELS=%d", zLevels);
 		CGContextSetBlendMode(context, kCGBlendModeCopy); // Apple uses this in QA1708
 		CGRect rect = CGRectMake(0, 0, _ims[0].map.width, _ims[0].map.height);
 		CGContextDrawImage(context, rect, image);
-		CGContextRelease(context);
+		//CGContextRelease(context);
 
 		madvise(_ims[0].map.addr, _ims[0].map.mappedSize-_ims[0].map.emptyTileRowSize, MADV_FREE); // MADV_DONTNEED
 
