@@ -26,13 +26,21 @@ let package = Package(
             name: "PhotoScrollerSwiftPackage",
             dependencies: [],
             exclude: [
-                // These are all links solely to make development easier
-//                "ImageDecoding/TiledImageBuilder.h",
+//                "include/libturbojpeg/jconfig.h",
+//                "include/libturbojpeg/jerror.h",
+//                "include/libturbojpeg/jmorecfg.h",
+//                "include/libturbojpeg/jpeglib.h",
+//                "include/libturbojpeg/turbojpeg.h",
+//
+//
+//
+//                // These are all links solely to make development easier
+//                "ImageDecoding/TiledImageBuilder-Private.h",
 //                "ImageDecoding/TiledImageBuilder+Draw.h",
 //                "ImageDecoding/TiledImageBuilder+JPEG.h",
-//                "ImageDecoding/TiledImageBuilder+Tile.h",
-//                "UI/TilingView.h",
-//                "UI/ImageScrollView.h",
+//                "ImageDecoding/TiledImageBuilder+Tile.h"
+////                "UI/TilingView.h",
+////                "UI/ImageScrollView.h",
             ]
         )
             //,

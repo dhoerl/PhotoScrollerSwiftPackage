@@ -133,8 +133,6 @@ extern dispatch_queue_t		fileFlushQueue;
 extern dispatch_group_t		fileFlushGroup;
 extern float				ubc_threshold_ratio;
 */
-extern volatile	int32_t		fileFlushGroupSuspended;
-extern volatile int32_t		ubc_usage;					// rough idea of what our buffer cache usage is
 
 @interface TiledImageBuilder ()
 @property (nonatomic, strong, readwrite) NSDictionary *properties;
@@ -150,6 +148,7 @@ extern volatile int32_t		ubc_usage;					// rough idea of what our buffer cache u
 + (CGColorSpaceRef)colorSpace;
 + (dispatch_group_t)fileFlushGroup;
 + (dispatch_queue_t)fileFlushQueue;
++ (int)ubcUsage;
 
 - (void)mapMemoryForIndex:(size_t)idx width:(size_t)w height:(size_t)h;
 
@@ -158,6 +157,9 @@ extern volatile int32_t		ubc_usage;					// rough idea of what our buffer cache u
 - (freeMemory)freeMemory:(NSString *)msg;
 
 - (NSUInteger)zoomLevelsForSize:(CGSize)imageSize;
+
+- (void)updateUbc:(int)value;
+- (bool)compareFlushGroupSuspendedExpected:(bool)expectedP desired:(bool)desired;
 
 @end
 

@@ -16,8 +16,6 @@
 
 #import "PhotoScrollerCommon.h"
 
-//#import "ImageDecoding/TileImageBuilder.h"
-//#import "UI/ImageScrollView.h"
-//#import "UI/TilingView.h"
-
-//#import "libturbojpeg/jpeglib.h"
+#import "../ImageDecoding/TiledImageBuilder.h"
+#import "../UI/ImageScrollView.h"
+#import "../UI/TilingView.h"

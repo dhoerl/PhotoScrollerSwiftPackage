@@ -18,6 +18,8 @@
 
 @class TiledImageBuilder;
 
+NS_ASSUME_NONNULL_BEGIN
+
 @interface TilingView : UIView
 @property (nonatomic, assign) BOOL annotates;
 
@@ -26,3 +28,5 @@
 //- (UIImage *)image;
 
 @end
+
+NS_ASSUME_NONNULL_END

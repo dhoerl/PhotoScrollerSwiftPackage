@@ -14,6 +14,8 @@
  *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#import <stdatomic.h>
+
 #import "PhotoScrollerCommon.h"
 #import "TiledImageBuilder-Private.h"
 
@@ -95,8 +97,9 @@ static void foo(int sig)
  */
  // Will figure a way to make these static again soon
 
-volatile int32_t			fileFlushGroupSuspended;
-volatile int32_t			ubc_usage;					// rough idea of what our buffer cache usage is
+static atomic_int           _incr = ATOMIC_VAR_INIT(0);
+static atomic_int           ubc_usage = ATOMIC_VAR_INIT(0); // rough idea of what our buffer cache usage is
+static atomic_bool          fileFlushGroupSuspended = ATOMIC_VAR_INIT(false);
 
 static dispatch_queue_t		fileFlushQueue;
 static dispatch_group_t		fileFlushGroup;
@@ -112,7 +115,7 @@ static float				ubc_threshold_ratio;
     NSStreamStatus      _streamStatus;
     NSError             *_streamError;
     BOOL                _hasSpaceAvailable;
-    dispatch_queue_t    delegateQueue;
+    //dispatch_queue_t    delegateQueue;
 }
 + (void)initialize
 {
@@ -123,6 +126,9 @@ static float				ubc_threshold_ratio;
 		fileFlushGroup = dispatch_group_create();
 		ubc_threshold_ratio = 1.0f;	// default ration - can override with class method below
 		//for(int i=0; i<=31; ++i) signal(i, foo);	// trying to find out why system was killing me - never did
+
+//        extern const char *jpeg_version;
+//        NSLog(@"HAHAHA %s", jpeg_version);
 	}
 }
 + (CGColorSpaceRef)colorSpace
@@ -144,6 +150,11 @@ static float				ubc_threshold_ratio;
 	return fileFlushGroup;
 }
 
++ (int)ubcUsage
+{
+    return atomic_load(&ubc_usage);
+}
+
 - (void)setFailed:(BOOL)failed {
     _failed = failed;
     assert(!_failed);
@@ -152,12 +163,12 @@ static float				ubc_threshold_ratio;
 
 
 #if LEVELS_INIT == 0
-- (instancetype)initWithSize:(CGSize)sz orientation:(NSInteger)orient queue:(dispatch_queue_t)queue delegate:(NSObject<NSStreamDelegate> *)del
+- (instancetype)initWithSize:(CGSize)sz orientation:(NSInteger)orient /* queue:(dispatch_queue_t)queue  delegate:(NSObject<NSStreamDelegate> *)del */
 {
 	if((self = [self initWithSize:sz])) {
 		_orientation = orient;
-        delegateQueue = queue;
-        delegate = del;
+        //delegateQueue = queue;
+        //delegate = del;
         bufferedData = [NSMutableData new];
         _streamStatus = NSStreamStatusNotOpen;
 	}
@@ -189,7 +200,7 @@ static float				ubc_threshold_ratio;
 
 #else
 
-- (instancetype)initWithLevels:(NSUInteger)levels orientation:(NSInteger)orient queue:(dispatch_queue_t)queue delegate:(NSStreamDelegate *)del
+- (instancetype)initWithLevels:(NSUInteger)levels orientation:(NSInteger)orient /* queue:(dispatch_queue_t)queue delegate:(NSStreamDelegate *)del */
 {
 	if((self = [self initWithLevels:levels])) {
 		_orientation = orient;
@@ -431,7 +442,7 @@ LOG(@"ZLEVELS=%d", zLevels);
 		CGContextSetBlendMode(context, kCGBlendModeCopy); // Apple uses this in QA1708
 		CGRect rect = CGRectMake(0, 0, _ims[0].map.width, _ims[0].map.height);
 		CGContextDrawImage(context, rect, image);
-		//CGContextRelease(context);
+		CGContextRelease(context);
 
 		madvise(_ims[0].map.addr, _ims[0].map.mappedSize-_ims[0].map.emptyTileRowSize, MADV_FREE); // MADV_DONTNEED
 
@@ -523,6 +534,15 @@ LOG(@"ZLEVELS=%d", zLevels);
 	return fm;
 }
 
+- (void)updateUbc:(int)value {
+    atomic_fetch_add(&ubc_usage, value);
+}
+
+- (bool)compareFlushGroupSuspendedExpected:(bool )expectedValue desired:(bool)desired {
+    bool expected = expectedValue;
+    //bool *expectedP = expected ? &atomicTrue : &atomicFalse;
+    return atomic_compare_exchange_strong(&fileFlushGroupSuspended, &expected, desired);
+}
 
 @end
 
@@ -614,3 +634,5 @@ static BOOL dump_memory_usage(struct task_basic_info *info) {
 }
 
 @end
+
+

@@ -18,9 +18,13 @@
 
 @class TiledImageBuilder;
 
+NS_ASSUME_NONNULL_BEGIN
+
 @interface ImageScrollView : UIScrollView <UIScrollViewDelegate>
+@property (class, nonatomic, assign) BOOL annotateTiles;    // if you want a thin white line around tiles. Default is off.
+
 @property (nonatomic, assign) BOOL aspectFill;
-@property (nonatomic, strong) UIView *imageView;	// in case you want to grab the image for other purposes, and then nil it
+@property (nonatomic, strong) UIView *imageView;    // in case you want to grab the image for other purposes, and then nil it
 
 - (void)displayObject:(id)obj;
 - (void)setMaxMinZoomScalesForCurrentBounds;
@@ -30,3 +34,5 @@
 - (void)restoreCenterPoint:(CGPoint)oldCenter scale:(CGFloat)oldScale;
 
 @end
+
+NS_ASSUME_NONNULL_END

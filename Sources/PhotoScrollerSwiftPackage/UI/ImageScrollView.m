@@ -20,9 +20,20 @@
 
 #import "../ImageDecoding/TiledImageBuilder.h"
 
+static BOOL _annotateTiles;
+
 @implementation ImageScrollView
 {
 	CGFloat scale;
+}
+
++ (BOOL)annotateTiles
+{
+  return _annotateTiles;
+}
++ (void)setAnnotateTiles:(BOOL)value
+{
+    _annotateTiles = value;
 }
 
 - (id)initWithFrame:(CGRect)frame
@@ -89,7 +100,7 @@
 	assert(obj);
 	
     // clear the previous imageView
-    [_imageView removeFromSuperview]; self.imageView = nil;
+    [_imageView removeFromSuperview];
     
     // reset our zoomScale to 1.0 before doing any further calculations
     self.zoomScale = 1.0;
@@ -100,7 +111,7 @@
 
 		// make a new TilingView for the new image
 		TilingView *view = [[TilingView alloc] initWithImageBuilder:tiledImage];
-		view.annotates = ANNOTATE_TILES;
+		view.annotates = ImageScrollView.annotateTiles;
 		self.imageView =  view;
 		scale = [[UIScreen mainScreen] scale];
 	} else

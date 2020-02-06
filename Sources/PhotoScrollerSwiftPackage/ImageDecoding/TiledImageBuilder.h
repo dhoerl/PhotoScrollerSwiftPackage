@@ -63,10 +63,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 
 #if LEVELS_INIT == 0
-- (instancetype)initWithSize:(CGSize)sz orientation:(NSInteger)orientation queue:(dispatch_queue_t)queue delegate:(NSObject<NSStreamDelegate> *)delegate;
+- (instancetype)initWithSize:(CGSize)sz orientation:(NSInteger)orientation /* queue:(dispatch_queue_t)queue delegate:(NSObject<NSStreamDelegate> *)delegate */;
 
 #else
-- (instancetype)initWithLevels:(NSUInteger)levels orientation:(NSInteger)orientation queue:(dispatch_queue_t)queue delegate:(NSObject<NSStreamDelegate> *)delegate);
+- (instancetype)initWithLevels:(NSUInteger)levels orientation:(NSInteger)orientation /* queue:(dispatch_queue_t)queue /* delegate:(NSObject<NSStreamDelegate> *)delegate */);
 #endif
 
 - (void)writeToImageFile:(NSData *)data;    // incremental update

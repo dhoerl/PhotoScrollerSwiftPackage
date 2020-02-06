@@ -60,7 +60,7 @@ static void term_source(j_decompress_ptr cinfo);
 					self.orientation = [[self.properties objectForKey:@"Orientation"] integerValue];
 				}
 			}
-			//CFRelease(imageSourcRef);
+			CFRelease(imageSourcRef);
 		}
 
 #if LEVELS_INIT == 0
@@ -111,10 +111,12 @@ static void term_source(j_decompress_ptr cinfo);
 			int fd = im->map.fd;
 			assert(fd != -1);
 			int32_t file_size = (int32_t)lseek(fd, 0, SEEK_END);
-			OSAtomicAdd32Barrier(file_size, &ubc_usage);
+			//OSAtomicAdd32Barrier(file_size, &ubc_usage);
+            [self updateUbc:file_size];
 
-			if(ubc_usage > self.ubc_threshold) {
-				if(OSAtomicCompareAndSwap32(0, 1, &fileFlushGroupSuspended)) {
+			if([TiledImageBuilder ubcUsage] > self.ubc_threshold) {
+                //if(OSAtomicCompareAndSwap32(0, 1, &fileFlushGroupSuspended)) {
+                if([self compareFlushGroupSuspendedExpected:false desired:true]) {
 					// LOG(@"SUSPEND==============================================================================");
 					dispatch_suspend([TiledImageBuilder fileFlushQueue ]);
 					dispatch_group_async([TiledImageBuilder fileFlushGroup], [TiledImageBuilder fileFlushQueue ], ^{ LOG(@"unblocked!"); } );
@@ -125,9 +127,12 @@ static void term_source(j_decompress_ptr cinfo);
 					// need to make sure file is kept open til we flush - who knows what will happen otherwise
 					int ret = fcntl(fd,  F_FULLFSYNC);
 					if(ret == -1) LOG(@"ERROR: failed to sync fd=%d", fd);
-					OSAtomicAdd32Barrier(-file_size, &ubc_usage);
-					if(ubc_usage <= self.ubc_threshold) {
-						if(OSAtomicCompareAndSwap32Barrier(1, 0, &fileFlushGroupSuspended)) {
+                    //OSAtomicAdd32Barrier(-file_size, &ubc_usage);
+                    [self updateUbc:-file_size];
+
+					if([TiledImageBuilder ubcUsage] <= self.ubc_threshold) {
+                        //if(OSAtomicCompareAndSwap32Barrier(1, 0, &fileFlushGroupSuspended)) {
+                        if([self compareFlushGroupSuspendedExpected:true desired:false]) {
 							dispatch_resume([TiledImageBuilder fileFlushQueue]);
 						}
 					}
@@ -202,7 +207,7 @@ static void term_source(j_decompress_ptr cinfo);
 					NSLog(@"ORIENTATION=%zd string=%@", self.orientation, [self.properties objectForKey:@"Orientation"]);
 				}
 			}
-			//CFRelease(imageSourcRef);
+			CFRelease(imageSourcRef);
 		}
 
 		src_mgr->cinfo.out_color_space = JCS_EXT_BGRA; // (using JCS_EXT_ABGR below)
@@ -455,7 +460,7 @@ static void term_source(j_decompress_ptr cinfo);
 						self.orientation = [[self.properties objectForKey:@"Orientation"] integerValue];
 					}
 				}
-				//CFRelease(imageSourcRef);			
+				CFRelease(imageSourcRef);
 			}
 
 			//LOG(@"GOT header");
