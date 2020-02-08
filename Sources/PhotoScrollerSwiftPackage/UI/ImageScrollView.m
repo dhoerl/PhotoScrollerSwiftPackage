@@ -115,6 +115,12 @@ static BOOL _annotateTiles;
 		self.imageView =  view;
 		scale = [[UIScreen mainScreen] scale];
 	} else
+	if([obj isKindOfClass:[TilingView class]]) {
+		TilingView *view = (TilingView *)obj;
+		view.annotates = ImageScrollView.annotateTiles;
+		self.imageView =  view;
+		scale = [[UIScreen mainScreen] scale];
+	} else
 	if([obj isKindOfClass:[UIImageView class]]) {
 		UIImageView *iv = (UIImageView *)obj;
 		size = iv.image.size;
