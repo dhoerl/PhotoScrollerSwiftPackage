@@ -36,7 +36,7 @@ static BOOL _annotateTiles;
     _annotateTiles = value;
 }
 
-- (id)initWithFrame:(CGRect)frame
+- (instancetype)initWithFrame:(CGRect)frame
 {
     if ((self = [super initWithFrame:frame])) {
         self.showsVerticalScrollIndicator = NO;
@@ -48,13 +48,29 @@ static BOOL _annotateTiles;
     return self;
 }
 
+// When we get resized
+- (void)setFrame:(CGRect)f {
+//NSLog(@"FRAME %@", NSStringFromCGRect(f));
+    super.frame = f;
+
+    if(_imageView) {
+        [self setMaxMinZoomScalesForCurrentBounds];
+        self.zoomScale = self.minimumZoomScale;
+    }
+}
+
 #pragma mark -
 #pragma mark Override layoutSubviews to center content
 
 - (void)layoutSubviews 
 {
     [super layoutSubviews];
-    
+
+    if(!_imageView) { return; }
+
+
+//NSLog(@"LAYOUT SUBVIEWS %@", NSStringFromCGRect(self.frame));
+
     // center the image as it becomes smaller than the size of the screen
     
     CGSize boundsSize = self.bounds.size;
@@ -140,9 +156,13 @@ static BOOL _annotateTiles;
 
 - (void)setMaxMinZoomScalesForCurrentBounds
 {
+    if(!_imageView) { return; }
+
     CGSize boundsSize = self.bounds.size;
     CGSize imageSize = _imageView.bounds.size;
-    
+//NSLog(@"CALC BOUNDS %@", NSStringFromCGRect(self.bounds));
+//NSLog(@"CALC IMAGE %@", NSStringFromCGRect(_imageView.bounds));
+
     // calculate min/max zoomscale
     CGFloat xScale = boundsSize.width / imageSize.width;    // the scale needed to perfectly fit the image width-wise
     CGFloat yScale = boundsSize.height / imageSize.height;  // the scale needed to perfectly fit the image height-wise
@@ -165,6 +185,10 @@ static BOOL _annotateTiles;
     
     self.maximumZoomScale = maxScale;
     self.minimumZoomScale = minScale;
+
+//NSLog(@"CALC MAX %f MIN %f", self.maximumZoomScale, self.minimumZoomScale);
+
+//    [self setNeedsDisplay];
 }
 
 #pragma mark -
