@@ -1,7 +1,7 @@
 # PhotoScrollerSwiftPackage
 Extract PhotoScrollerNetwork into a Swift Package
 
-Version 0.2.0: this Swift Package is now usable. For usage look at the related PhotoScrollerNetworkTest
+Version 0.4.0: this Swift Package is now usable. For usage look at the related PhotoScrollerNetworkTest
   project. Essentially TiledImageBuilder now offers a NSOutputStream interface, so you open it,
   feed it data chunks with write, then close it. The demo project shows how you can use local files
   as well as ones on the web.
