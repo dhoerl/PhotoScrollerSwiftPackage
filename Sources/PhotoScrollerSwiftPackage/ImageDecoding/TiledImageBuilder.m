@@ -505,7 +505,7 @@ static float				ubc_threshold_ratio;
 		}
 		
 #if MEMORY_DEBUGGING == 0
-		NSLog(@"%@:   "
+		LOG(@"%@:   "
 			"total: %lu "
 			"used: %lu "
 			"FREE: %lu "
@@ -525,7 +525,7 @@ static float				ubc_threshold_ratio;
 - (void)updateUbc:(int64_t)value {
     int64_t val = atomic_fetch_add(&ubc_usage, value);
     
-    NSLog(@"UBC=%lld M", val/(1024*1024));
+    LOG(@"UBC=%lld M", val/(1024*1024));
 }
 
 - (bool)compareFlushGroupSuspendedExpected:(bool )expectedValue desired:(bool)desired {
