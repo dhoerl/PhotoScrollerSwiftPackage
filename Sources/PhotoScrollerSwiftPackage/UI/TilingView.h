@@ -25,7 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (id)initWithImageBuilder:(TiledImageBuilder *)imageBuilder;
 - (CGSize)imageSize;
-//- (UIImage *)image;
+//- (UIImage *)image;   // forget why this was attempted
 
 @end
 

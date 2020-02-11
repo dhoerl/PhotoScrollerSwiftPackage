@@ -17,5 +17,3 @@
 
 #define ZOOM_LEVELS			  4
 #define TILE_SIZE           256		// Power of 2. The larger the number the more wasted space at right/bottom.
-//#define ANNOTATE_TILES	YES     // Set via class property ImageScrollView.annotateTiles. Default is off.
-

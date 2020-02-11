@@ -19,7 +19,7 @@
 #import "TiledImageBuilder-Private.h"
 
 #if 0	// 0 == no debug, 1 == lots of mesages
-#define LOG(...) NSLog(__VA_ARGS__)
+#define LOG(...) NSLog(@"TB-Tile: " __VA_ARGS__)
 #else
 #define LOG(...)
 #endif
@@ -106,9 +106,10 @@
 				dispatch_suspend([TiledImageBuilder fileFlushQueue]);
 				dispatch_group_async([TiledImageBuilder fileFlushGroup], [TiledImageBuilder fileFlushQueue], ^{ LOG(@"unblocked!"); } );
 			}
-[self freeMemory:[NSString stringWithFormat:@"Exceeded threshold: usage=%u thresh=%u", [TiledImageBuilder ubcUsage], self.ubc_threshold]];
-		}
-else [self freeMemory:[NSString stringWithFormat:@"Under threshold: usage=%u thresh=%u", [TiledImageBuilder ubcUsage], self.ubc_threshold]];
+            [self freeMemory:[NSString stringWithFormat:@"Exceeded threshold: usage=%lld thresh=%lld", [TiledImageBuilder ubcUsage], self.ubc_threshold]];
+		} else {
+            [self freeMemory:[NSString stringWithFormat:@"Under threshold: usage=%lld thresh=%lld", [TiledImageBuilder ubcUsage], self.ubc_threshold]];
+        }
 
 		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^
 			{

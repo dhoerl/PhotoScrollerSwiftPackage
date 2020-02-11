@@ -20,6 +20,13 @@
 
 #import "../ImageDecoding/TiledImageBuilder.h"
 
+
+#if 0    // 0 == no debug, 1 == lots of mesages
+#define LOG(...) NSLog(@"ISV: " __VA_ARGS__)
+#else
+#define LOG(...)
+#endif
+
 static BOOL _annotateTiles;
 
 @implementation ImageScrollView
@@ -46,6 +53,9 @@ static BOOL _annotateTiles;
         self.delegate = self;
     }
     return self;
+}
+- (void)dealloc {
+    LOG(@"ImageScrollView DEALLOC!");
 }
 
 // When we get resized

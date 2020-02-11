@@ -18,12 +18,9 @@
 #define MEMORY_DEBUGGING        0        // set to 1 if you want to see how memory changes when images are processed
 #define MMAP_DEBUGGING          0        // set to 1 to see how mmap/munmap working
 #define MAPPING_IMAGES          0        // set to 1 to use MMAP for image tile retrieval - if 0 use pread
-#define USE_VIMAGE              0        // set to 1 if you want vImage to downsize images (slightly better quality, much much slower)
 #define LEVELS_INIT             0        // set to 1 if you want to specify the levels in the init method instead of using the target view size
 
 @import Foundation;
-
-#include <libkern/OSAtomic.h>
 
 #include <mach/mach.h>			// freeMemory
 #include <mach/mach_host.h>		// freeMemory
@@ -37,8 +34,6 @@
 #include <sys/mount.h>
 #include <sys/sysctl.h>
 #include <sys/stat.h>
-
-//#import "UTCoreTypes.h"
 
 #include "libturbojpeg/jpeglib.h"
 #include "libturbojpeg/turbojpeg.h"
@@ -97,11 +92,11 @@ typedef struct {
 
 // Internal struct to keep values of interest when probing the system
 typedef struct {
-	size_t freeMemory;
-	size_t usedMemory;
-	size_t totlMemory;
-	size_t resident_size;
-	size_t virtual_size;
+	int64_t freeMemory;
+	int64_t usedMemory;
+	int64_t totlMemory;
+	int64_t resident_size;
+	int64_t virtual_size;
 } freeMemory;
 
 #import "TiledImageBuilder.h"
@@ -148,7 +143,7 @@ extern float				ubc_threshold_ratio;
 + (CGColorSpaceRef)colorSpace;
 + (dispatch_group_t)fileFlushGroup;
 + (dispatch_queue_t)fileFlushQueue;
-+ (int)ubcUsage;
++ (int64_t)ubcUsage;
 
 - (void)mapMemoryForIndex:(size_t)idx width:(size_t)w height:(size_t)h;
 
@@ -158,7 +153,7 @@ extern float				ubc_threshold_ratio;
 
 - (NSUInteger)zoomLevelsForSize:(CGSize)imageSize;
 
-- (void)updateUbc:(int)value;
+- (void)updateUbc:(int64_t)value;
 - (bool)compareFlushGroupSuspendedExpected:(bool)expectedP desired:(bool)desired;
 
 @end
@@ -182,4 +177,3 @@ extern float				ubc_threshold_ratio;
 - (BOOL)jpegOutputScanLines;	// return YES when done
 
 @end
-

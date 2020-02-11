@@ -55,7 +55,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) uint64_t startTime;					// time stamp of when this operation started decoding
 @property (nonatomic, assign) uint64_t finishTime;					// time stamp of when this operation finished  decoding
 @property (nonatomic, assign) uint32_t milliSeconds;				// elapsed time
-@property (nonatomic, assign) int32_t ubc_threshold;				// UBC threshold above which outstanding writes are flushed to the file system (dynamic default)
+@property (nonatomic, assign) int64_t ubc_threshold;				// UBC threshold above which outstanding writes are flushed to the file system (dynamic default)
 @property (nonatomic, assign, readonly) BOOL failed;                // global Error flags
 @property (nonatomic, assign, readonly) BOOL finished;              // image was successfully decoded!
 
@@ -69,7 +69,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithLevels:(NSUInteger)levels orientation:(NSInteger)orientation /* queue:(dispatch_queue_t)queue /* delegate:(NSObject<NSStreamDelegate> *)delegate */);
 #endif
 
-- (void)writeToImageFile:(NSData *)data;    // incremental update
 - (CGSize)imageSize;                        // orientation modifies what is downloaded
 
 @end
@@ -90,35 +89,3 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
-
-/*
- @interface MyOutputStream ()
-
- //@property (nonatomic, strong, readwrite) NSMutableData *data;
-
- @end
-
- @implementation MyOutputStream
-
- - (instancetype)initToMemory {
-	 self = [super initToMemory];
-	 //_data = [NSMutableData new];
-	 return self;
- }
-
- - (void)open {
-	 [super open];
- }
-
- - (BOOL)hasSpaceAvailable {
-	 return YES;
- }
-
- - (NSInteger)write:(const uint8_t *)buffer maxLength:(NSUInteger)len {
- //	[self.data appendBytes:buffer length:len];
-	 return len;
- }
-
- @end
-
-*/

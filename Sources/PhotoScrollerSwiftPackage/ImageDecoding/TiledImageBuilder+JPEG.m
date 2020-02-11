@@ -17,7 +17,12 @@
 #import "PhotoScrollerCommon.h"
 #import "../ImageDecoding/TiledImageBuilder-Private.h"
 
-#define LOG NSLog
+#if 0	// 0 == no debug, 1 == lots of mesages
+#define LOG(...) NSLog(@"TB-JPG: " __VA_ARGS__)    // joins the string here and the first varargs
+#else
+#define LOG(...)
+#endif
+
 
 static void my_error_exit(j_common_ptr cinfo);
 
@@ -234,7 +239,7 @@ static void term_source(j_decompress_ptr cinfo);
 		if(!self.failed) {
 			(void)jpeg_start_decompress(&src_mgr->cinfo);
 			
-			while(![self jpegOutputScanLines]) ;
+			while(![self jpegOutputScanLines]);
 		}
 	}
 	jpeg_destroy_decompress(&src_mgr->cinfo);

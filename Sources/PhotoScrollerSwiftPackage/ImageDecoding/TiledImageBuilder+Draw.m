@@ -17,7 +17,11 @@
 #import "PhotoScrollerCommon.h"
 #import "../ImageDecoding/TiledImageBuilder-Private.h"
 
-#define LOG NSLog
+#if 0	// 0 == no debug, 1 == lots of mesages
+#define LOG(...) NSLog(@"TB-Draw: " __VA_ARGS__)    // joins the string here and the first varargs
+#else
+#define LOG(...)
+#endif
 
 static inline long offsetFromScale(float scale) { long s = lrintf(1/scale); long idx = 0; while(s > 1) { s /= 2.0f; ++idx; } return idx; }
 

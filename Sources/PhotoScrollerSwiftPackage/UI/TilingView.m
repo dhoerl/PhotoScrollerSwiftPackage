@@ -175,20 +175,14 @@ if(CGImageGetWidth(image) == 0 || CGImageGetHeight(image) == 0) {
     return [UIColor colorWithRed:r green:g blue:b alpha:a];
 }
 
-#if 0 
-
+#if 0   // forget why I might want this - just download it no?
 // How to render it http://stackoverflow.com/questions/5526545/render-large-catiledlayer-into-smaller-area
-
 - (UIImage *)image
 {
     UIGraphicsBeginImageContextWithOptions(self.bounds.size, YES, 0);
-	
     [self.layer renderInContext:UIGraphicsGetCurrentContext()];
-
     UIImage *img = UIGraphicsGetImageFromCurrentImageContext();
-
     UIGraphicsEndImageContext();
-
     return img;
 }
 #endif
