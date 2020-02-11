@@ -44,3 +44,17 @@ Feb 1, 2020 : Working on this almost full time. Focused on a test app that will 
   Very happy how it progressing, but its taking a lot more time than the original code took (I did most 
   of that in a weekend, believe it or not, but I was a lot younger then too!)
 
+----
+
+Apple's PhotoScroller project lets you display huge images using CATiledLayer, but only if
+you pretile them first! My PhotoNetworkScroller project supports tiling large local
+files and network fetches.
+
+This package:
+
+- blazingly fast tile rendering - visually much much faster than Apple's code (which uses png files in the file system)
+- you supply a single jpeg file or URL and this code does all the tiling for you, quickly and painlessly
+- builds on Apple's PhotoScroller project by addressing its deficiencies (mostly the pretiled images)
+- provides the means to process very large images for use in a zoomable scrollview
+- is backed by a CATiledLayer so that only those tiles needed for display consume memory
+- each zoom level has one dedicated temp file rearranged into tiles for rapid tile access & rendering
