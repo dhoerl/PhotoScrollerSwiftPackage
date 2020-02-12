@@ -37,61 +37,6 @@ static void term_source(j_decompress_ptr cinfo);
 
 @implementation TiledImageBuilder (JPEG)
 
-- (void)decodeImageData:(NSData *)data
-{
-	tjhandle decompressor = tjInitDecompress();
-
-	unsigned char *jpegBuf = (unsigned char *)[data bytes];
-	unsigned long jpegSize = [data length];
-	int jwidth, jheight, jpegSubsamp;
-	self.failed = (BOOL)tjDecompressHeader2(decompressor,
-		jpegBuf,
-		jpegSize,
-		&jwidth,
-		&jheight,
-		&jpegSubsamp
-		);
-
-	if(!self.failed) {
-		{
-			CGImageSourceRef imageSourcRef = CGImageSourceCreateIncremental(NULL);
-			CGImageSourceUpdateData(imageSourcRef, (__bridge CFDataRef)data, NO);
-
-			CFDictionaryRef dict = CGImageSourceCopyPropertiesAtIndex(imageSourcRef, 0, NULL);
-			if(dict) {
-				//CFShow(dict);
-				self.properties = CFBridgingRelease(dict);
-				if(!self.orientation) {
-					self.orientation = [[self.properties objectForKey:@"Orientation"] integerValue];
-				}
-			}
-			CFRelease(imageSourcRef);
-		}
-
-#if LEVELS_INIT == 0
-		self.zoomLevels = [self zoomLevelsForSize:CGSizeMake(jwidth, jheight)];
-		self.ims = calloc(self.zoomLevels, sizeof(imageMemory));
-#endif
-		[self mapMemoryForIndex:0 width:jwidth height:jheight];
-
-		imageMemory *imP = self.ims;	// 0th offset
-
-		self.failed = (BOOL)tjDecompress2(decompressor,
-			jpegBuf,
-			jpegSize,
-			imP->map.addr + imP->map.col0offset + imP->map.row0offset*imP->map.bytesPerRow,
-			jwidth,
-			(int)imP->map.bytesPerRow,
-			jheight,
-			TJPF_BGRA,
-			TJFLAG_NOREALLOC
-			);
-		tjDestroy(decompressor);
-	}
-
-	if(!self.failed) [self createLevelsAndTile];
-}
-
 - (BOOL)partialTile:(BOOL)final
 {
 	imageMemory *im = self.ims;
@@ -112,37 +57,8 @@ static void term_source(j_decompress_ptr cinfo);
 	if(final) {
 		im = self.ims;
 		for(size_t idx=0; idx<self.zoomLevels; ++idx, ++im) {
-			[self truncateEmptySpace:im];
-			int fd = im->map.fd;
-			assert(fd != -1);
-			int32_t file_size = (int32_t)lseek(fd, 0, SEEK_END);
-			//OSAtomicAdd32Barrier(file_size, &ubc_usage);
-            [self updateUbc:file_size];
-
-			if([TiledImageBuilder ubcUsage] > self.ubc_threshold) {
-                //if(OSAtomicCompareAndSwap32(0, 1, &fileFlushGroupSuspended)) {
-                if([self compareFlushGroupSuspendedExpected:false desired:true]) {
-					// LOG(@"SUSPEND==============================================================================");
-					dispatch_suspend([TiledImageBuilder fileFlushQueue ]);
-					dispatch_group_async([TiledImageBuilder fileFlushGroup], [TiledImageBuilder fileFlushQueue ], ^{ LOG(@"unblocked!"); } );
-				}
-			}
-			dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^
-				{
-					// need to make sure file is kept open til we flush - who knows what will happen otherwise
-					int ret = fcntl(fd,  F_FULLFSYNC);
-					if(ret == -1) LOG(@"ERROR: failed to sync fd=%d", fd);
-                    //OSAtomicAdd32Barrier(-file_size, &ubc_usage);
-                    [self updateUbc:-file_size];
-
-					if([TiledImageBuilder ubcUsage] <= self.ubc_threshold) {
-                        //if(OSAtomicCompareAndSwap32Barrier(1, 0, &fileFlushGroupSuspended)) {
-                        if([self compareFlushGroupSuspendedExpected:true desired:false]) {
-							dispatch_resume([TiledImageBuilder fileFlushQueue]);
-						}
-					}
-				} );
-		}
+            [self writeToFileSystem:im];
+        }
 	}
 	return YES;
 }
@@ -419,10 +335,6 @@ static void term_source(j_decompress_ptr cinfo);
 	}
 	return ret;
 }
-
-@end
-
-@implementation TiledImageBuilder (JPEG_PUB)
 
 - (BOOL)jpegAdvance:(NSData *)webData
 {

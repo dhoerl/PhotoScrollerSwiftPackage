@@ -30,6 +30,7 @@ static size_t	calcBytesPerRow(size_t row) { return calcDimension(row) * bytesPer
 
 static BOOL dump_memory_usage(struct task_basic_info *info);
 static uint64_t freeFileSpace();
+static freeMemory memoryStats();
 
 #ifndef NDEBUG
 //static void dumpMapper(const char *str, mapper *m)
@@ -119,6 +120,7 @@ static float				ubc_threshold_ratio;
     BOOL                _hasSpaceAvailable;
     //dispatch_queue_t    delegateQueue;
 }
+
 + (void)initialize
 {
 	if(self == [TiledImageBuilder class]) {
@@ -150,9 +152,15 @@ static float				ubc_threshold_ratio;
 {
     return atomic_load(&ubc_usage);
 }
++ (void)updateUbc:(int64_t)value {
+    atomic_fetch_add(&ubc_usage, value);
 
-- (void)setFailed:(BOOL)failed {
-    _failed = failed;
+    LOG(@"UBC=%lld M", Self.ubcUsage/(1024*1024));
+}
++ (bool)compareFlushGroupSuspendedExpected:(bool )expectedValue desired:(bool)desired {
+    bool expected = expectedValue;
+    //bool *expectedP = expected ? &atomicTrue : &atomicFalse;
+    return atomic_compare_exchange_strong(&fileFlushGroupSuspended, &expected, desired);
 }
 
 #if LEVELS_INIT == 0
@@ -235,19 +243,31 @@ static float				ubc_threshold_ratio;
 
 - (void)dealloc
 {
-	//[[NSNotificationCenter defaultCenter] removeObserver:self];
-
-	for(NSUInteger idx=0; idx<_zoomLevels;++idx) {
-		int fd = _ims[idx].map.fd;
-		if(fd>0) close(fd);
-	}
-	free(_ims);
-
-	if(_imageFile) fclose(_imageFile);
-	if(_imagePath) unlink([_imagePath fileSystemRepresentation]);
-	if(_src_mgr->cinfo.src)	jpeg_destroy_decompress(&_src_mgr->cinfo);
-	free(_src_mgr);
+    [self cancel];
 }
+
+- (void)cancel
+{
+    self.isCancelled = YES;
+    _streamStatus = NSStreamStatusError;
+
+	//[[NSNotificationCenter defaultCenter] removeObserver:self];
+    if(_ims) {
+        for(NSUInteger idx=0; idx<_zoomLevels;++idx) {
+            int fd = _ims[idx].map.fd;
+            if(fd>0) close(fd);
+        }
+        free(_ims); _ims = nil;
+    }
+
+	if(_imageFile) { fclose(_imageFile); _imageFile = nil; }
+	if(_imagePath) { unlink([_imagePath fileSystemRepresentation]); _imagePath = nil; }
+    if(_src_mgr) {
+        if(_src_mgr->cinfo.src)	{ jpeg_destroy_decompress(&_src_mgr->cinfo); }
+        free(_src_mgr); _src_mgr = nil;
+    }
+}
+
 
 #if 0
 - (void)lowMemory:(NSNotification *)note
@@ -442,6 +462,54 @@ static float				ubc_threshold_ratio;
 	}
 }
 
+#pragma mark Memory Management
+
+- (void)writeToFileSystem:(imageMemory *)im {
+    // don't need the scratch space now
+    [self truncateEmptySpace:im];
+
+    int fd = im->map.fd;
+    assert(fd != -1);
+    size_t file_size = lseek(fd, 0, SEEK_END);
+    [TiledImageBuilder updateUbc:file_size];
+
+    int64_t threshold = self.ubc_threshold;
+
+    if([TiledImageBuilder ubcUsage] > threshold) {
+        //if(OSAtomicCompareAndSwap32(0, 1, &fileFlushGroupSuspended)) {
+        if([TiledImageBuilder compareFlushGroupSuspendedExpected:false desired:true]) {
+            // LOG(@"SUSPEND==========================================================usage=%d thresh=%d", ubc_usage, ubc_thresh);
+            dispatch_suspend([TiledImageBuilder fileFlushQueue]);
+            dispatch_group_async([TiledImageBuilder fileFlushGroup], [TiledImageBuilder fileFlushQueue], ^{ LOG(@"unblocked!"); } );
+        }
+#if MEMORY_DEBUGGING
+        [self freeMemory:[NSString stringWithFormat:@"Exceeded threshold: usage=%lld thresh=%lld", [TiledImageBuilder ubcUsage], self.ubc_threshold]];
+#endif
+    } else {
+#if MEMORY_DEBUGGING
+        [self freeMemory:[NSString stringWithFormat:@"Under threshold: usage=%lld thresh=%lld", [TiledImageBuilder ubcUsage], self.ubc_threshold]];
+#endif
+    }
+
+    __typeof__(self) __weak weakSelf = self;
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^
+        {
+            // Always do this - keep the usage correct even if cancelled
+            [TiledImageBuilder updateUbc:-file_size];
+            if([TiledImageBuilder ubcUsage] <= threshold) {
+                if([TiledImageBuilder compareFlushGroupSuspendedExpected:true desired:false]) {
+                    dispatch_resume([TiledImageBuilder fileFlushQueue]);
+                }
+            }
+            // only reason for this is to not sync the file if we're getting cancelled
+            __typeof__(self) strongSelf = weakSelf;
+            if(!strongSelf || strongSelf.isCancelled) return;
+            // need to make sure file is kept open til we flush - who knows what will happen otherwise
+            int ret = fcntl(fd,  F_FULLFSYNC);
+            if(ret == -1) LOG(@"ERROR: failed to sync fd=%d", fd);
+        } );
+}
+
 #pragma mark Utilities
 
 - (uint64_t)timeStamp
@@ -449,89 +517,11 @@ static float				ubc_threshold_ratio;
 	return mach_absolute_time();
 }
 
-- (uint64_t)freeDiskspace
-{
-	// http://stackoverflow.com/questions/5712527
-    uint64_t totalSpace = 0;
-    uint64_t totalFreeSpace = 0;
-
-    __autoreleasing NSError *error = nil;  
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);  
-    NSDictionary *dictionary = [[NSFileManager defaultManager] attributesOfFileSystemForPath:[paths lastObject] error: &error];  
-
-    if (dictionary) {  
-        NSNumber *fileSystemSizeInBytes = [dictionary objectForKey: NSFileSystemSize];  
-        NSNumber *freeFileSystemSizeInBytes = [dictionary objectForKey:NSFileSystemFreeSize];
-        totalSpace = [fileSystemSizeInBytes unsignedLongLongValue];
-        totalFreeSpace = [freeFileSystemSizeInBytes unsignedLongLongValue];
-        LOG(@"Disk Capacity of %llu MiB with %llu MiB free disk available.", ((totalSpace/1024ll)/1024ll), ((totalFreeSpace/1024ll)/1024ll));
-    } else {  
-        LOG(@"Error Obtaining System Memory Info: Domain = %@, Code = %td", [error domain], [error code]);
-    }  
-
-    return totalFreeSpace;
-}
-
-- (freeMemory)freeMemory:(NSString *)msg
-{
-	// http://stackoverflow.com/questions/5012886
-    mach_port_t host_port;
-    mach_msg_type_number_t host_size;
-    vm_size_t pagesize;
-	freeMemory fm = { 0, 0, 0, 0, 0 };
-
-    host_port = mach_host_self();
-    host_size = sizeof(vm_statistics_data_t) / sizeof(integer_t);
-    host_page_size(host_port, &pagesize);        
-
-    vm_statistics_data_t vm_stat;
-
-    if (host_statistics(host_port, HOST_VM_INFO, (host_info_t)&vm_stat, &host_size) != KERN_SUCCESS) {
-        LOG(@"Failed to fetch vm statistics");
-	} else {
-		/* Stats in bytes */ 
-		uint64_t mem_used = (uint64_t)((vm_stat.active_count + vm_stat.wire_count) * pagesize);
-		uint64_t mem_free = (uint64_t)((vm_stat.free_count + vm_stat.inactive_count) * pagesize);
-		uint64_t mem_total = mem_used + mem_free;
-		
-		fm.freeMemory = mem_free;
-		fm.usedMemory = mem_used;
-		fm.totlMemory = mem_total;
-		
-		struct task_basic_info info;
-		if(dump_memory_usage(&info)) {
-			fm.resident_size = info.resident_size;
-			fm.virtual_size = info.virtual_size;
-		}
-		
-#if MEMORY_DEBUGGING == 0
-		LOG(@"%@:   "
-			"total: %lu "
-			"used: %lu "
-			"FREE: %lu "
-			"  [resident=%lu virtual=%lu]",
-			msg, 
-			(unsigned long)mem_total,
-			(unsigned long)mem_used,
-			(unsigned long)mem_free,
-			(unsigned long)fm.resident_size,
-			(unsigned long)fm.virtual_size
-		);
+- (freeMemory)freeMemory:(NSString *)msg {
+#ifndef NDEBUG
+    LOG(@"%@", msg);
+    memoryStats();
 #endif
-	}
-	return fm;
-}
-
-- (void)updateUbc:(int64_t)value {
-    int64_t val = atomic_fetch_add(&ubc_usage, value);
-    
-    LOG(@"UBC=%lld M", val/(1024*1024));
-}
-
-- (bool)compareFlushGroupSuspendedExpected:(bool )expectedValue desired:(bool)desired {
-    bool expected = expectedValue;
-    //bool *expectedP = expected ? &atomicTrue : &atomicFalse;
-    return atomic_compare_exchange_strong(&fileFlushGroupSuspended, &expected, desired);
 }
 
 @end
@@ -562,25 +552,67 @@ static BOOL dump_memory_usage(struct task_basic_info *info) {
 }
 
 static uint64_t freeFileSpace() {
-    float totalSpace = 0;
+	// http://stackoverflow.com/questions/5712527
     float totalFreeSpace = 0;
-    NSError *error = nil;
+    __autoreleasing NSError *error = nil;
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSDictionary *dictionary = [[NSFileManager defaultManager] attributesOfFileSystemForPath:[paths lastObject] error: &error];
 
     if (dictionary) {
-        NSNumber *fileSystemSizeInBytes = [dictionary objectForKey: NSFileSystemSize];
         NSNumber *freeFileSystemSizeInBytes = [dictionary objectForKey:NSFileSystemFreeSize];
-        totalSpace = [fileSystemSizeInBytes floatValue];
-        //self.totalSpace = [NSString stringWithFormat:@"%.3f GB",totalSpace/(1024*1024*1024)];
         totalFreeSpace = [freeFileSystemSizeInBytes unsignedLongLongValue];
-        //self.freeSpace = [NSString stringWithFormat:@"%.3f GB",totalFreeSpace/(1024*1024*1024)];
-
     } else {
         LOG(@"Error Obtaining System Memory Info: Domain = %@, Code = %ld", [error domain], (long)[error code]);
     }
 
     return totalFreeSpace;
+}
+
+static freeMemory memoryStats() {
+	// http://stackoverflow.com/questions/5012886
+    mach_port_t host_port;
+    mach_msg_type_number_t host_size;
+    vm_size_t pagesize;
+	freeMemory fm = { 0, 0, 0, 0, 0 };
+
+    host_port = mach_host_self();
+    host_size = sizeof(vm_statistics_data_t) / sizeof(integer_t);
+    host_page_size(host_port, &pagesize);
+
+    vm_statistics_data_t vm_stat;
+
+    if (host_statistics(host_port, HOST_VM_INFO, (host_info_t)&vm_stat, &host_size) != KERN_SUCCESS) {
+        LOG(@"Failed to fetch vm statistics");
+	} else {
+		/* Stats in bytes */
+		uint64_t mem_used = (uint64_t)((vm_stat.active_count + vm_stat.wire_count) * pagesize);
+		uint64_t mem_free = (uint64_t)((vm_stat.free_count + vm_stat.inactive_count) * pagesize);
+		uint64_t mem_total = mem_used + mem_free;
+
+		fm.freeMemory = mem_free;
+		fm.usedMemory = mem_used;
+		fm.totlMemory = mem_total;
+
+		struct task_basic_info info;
+		if(dump_memory_usage(&info)) {
+			fm.resident_size = info.resident_size;
+			fm.virtual_size = info.virtual_size;
+		}
+
+		LOG(@"%@:   "
+			"total: %lu "
+			"used: %lu "
+			"FREE: %lu "
+			"  [resident=%lu virtual=%lu]",
+			msg,
+			(unsigned long)mem_total,
+			(unsigned long)mem_used,
+			(unsigned long)mem_free,
+			(unsigned long)fm.resident_size,
+			(unsigned long)fm.virtual_size
+		);
+	}
+	return fm;
 }
 
 @implementation TiledImageBuilder (NSStreamDelegate)

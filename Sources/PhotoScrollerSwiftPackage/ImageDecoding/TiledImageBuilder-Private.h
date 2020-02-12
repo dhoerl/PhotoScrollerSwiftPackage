@@ -131,8 +131,10 @@ extern float				ubc_threshold_ratio;
 
 @interface TiledImageBuilder ()
 @property (nonatomic, strong, readwrite) NSDictionary *properties;
-@property (nonatomic, assign, readwrite) BOOL failed;				// global Error flags
-@property (nonatomic, assign, readwrite) BOOL finished;             // image was successfully decoded!
+@property (atomic, assign, readwrite) BOOL failed;                   // global Error flags
+@property (atomic, assign, readwrite) BOOL finished;                 // image was successfully decoded!
+@property (atomic, assign, readwrite) BOOL isCancelled;              // image was successfully decoded!
+
 @property (nonatomic, assign) imageMemory *ims;
 @property (nonatomic, assign) FILE *imageFile;
 @property (nonatomic, assign) size_t pageSize;
@@ -143,20 +145,18 @@ extern float				ubc_threshold_ratio;
 + (CGColorSpaceRef)colorSpace;
 + (dispatch_group_t)fileFlushGroup;
 + (dispatch_queue_t)fileFlushQueue;
-+ (int64_t)ubcUsage;
++ (void)updateUbc:(int64_t)value;
++ (bool)compareFlushGroupSuspendedExpected:(bool)expectedP desired:(bool)desired;
 
 - (void)mapMemoryForIndex:(size_t)idx width:(size_t)w height:(size_t)h;
+- (void)writeToFileSystem:(imageMemory *)im;
 
 - (uint64_t)timeStamp;
-- (uint64_t)freeDiskspace;
-- (freeMemory)freeMemory:(NSString *)msg;
 
 - (NSUInteger)zoomLevelsForSize:(CGSize)imageSize;
 
-- (void)updateUbc:(int64_t)value;
-- (bool)compareFlushGroupSuspendedExpected:(bool)expectedP desired:(bool)desired;
-
 @end
+
 
 @interface TiledImageBuilder (Tile)
 
@@ -169,11 +169,12 @@ extern float				ubc_threshold_ratio;
 
 @interface TiledImageBuilder (JPEG)
 
-- (void)decodeImageData:(NSData *)data;
 - (BOOL)partialTile:(BOOL)final;
 
 - (void)jpegInitFile:(NSString *)path;
 - (void)jpegInitNetwork;
 - (BOOL)jpegOutputScanLines;	// return YES when done
+
+- (BOOL)jpegAdvance:(NSData *)data;
 
 @end

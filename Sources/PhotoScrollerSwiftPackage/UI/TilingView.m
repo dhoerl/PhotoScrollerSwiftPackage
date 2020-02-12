@@ -34,10 +34,13 @@
 
 @end
 
+@interface TilingView ()
+
+@property (nonatomic, strong, readwrite) TiledImageBuilder *imageBuilder;
+
+@end
+
 @implementation TilingView
-{
-	TiledImageBuilder *tb;
-}
 
 + (Class)layerClass
 {
@@ -49,7 +52,7 @@
 	CGRect rect = { CGPointMake(0, 0), [imageBuilder imageSize] };
 	
     if ((self = [super initWithFrame:rect])) {
-        tb = imageBuilder;
+        _imageBuilder = imageBuilder;
 
         CATiledLayer *tiledLayer = (CATiledLayer *)[self layer];
         tiledLayer.levelsOfDetail = imageBuilder.zoomLevels;
@@ -64,7 +67,7 @@
 
 - (void)drawLayer:(CALayer*)layer inContext:(CGContextRef)context
 {
-	if(tb.failed) return;
+	if(_imageBuilder.failed) return;
 
     CGFloat scale = CGContextGetCTM(context).a;
 
@@ -79,7 +82,7 @@
 	//LOG(@"scale=%f 1/scale=%f levelsOfDetail=%ld levelsOfDetailBias=%ld row=%f col=%f offsetFromScale=%ld", scale, 1/scale, ((CATiledLayer *)layer).levelsOfDetail, ((CATiledLayer *)layer).levelsOfDetailBias, row, col, offsetFromScale(scale));
 
 
-	CGImageRef image = [tb newImageForScale:scale location:CGPointMake(col, row) box:box];
+	CGImageRef image = [_imageBuilder newImageForScale:scale location:CGPointMake(col, row) box:box];
 
 #if 0 // had this happen, think its fixed
 if(!image) {
@@ -100,7 +103,7 @@ if(CGImageGetWidth(image) == 0 || CGImageGetHeight(image) == 0) {
 	box.origin.y = 0;
 	//LOG(@"Draw: scale=%f row=%d col=%d", scale, (int)row, (int)col);
 
-	CGAffineTransform transform = [tb transformForRect:box /* scale:scale */];
+	CGAffineTransform transform = [_imageBuilder transformForRect:box /* scale:scale */];
 	CGContextConcatCTM(context, transform);
 
 	// Detect Rotation
@@ -125,7 +128,7 @@ if(CGImageGetWidth(image) == 0 || CGImageGetHeight(image) == 0) {
 
 - (CGSize)imageSize
 {
-	return [tb imageSize];
+	return [_imageBuilder imageSize];
 }
 
 -(UIColor *)getColorAtPosition:(CGPoint)pt
@@ -146,7 +149,7 @@ if(CGImageGetWidth(image) == 0 || CGImageGetHeight(image) == 0) {
 #endif
 
 	CGRect tileRect = CGRectMake(0, 0, tileSize.width, tileSize.height);
-	UIImage *tile = [tb tileForScale:1 location:CGPointMake(col, row)];
+	UIImage *tile = [_imageBuilder tileForScale:1 location:CGPointMake(col, row)];
 	[tile drawInRect:tileRect];
 	UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
 	
@@ -174,17 +177,5 @@ if(CGImageGetWidth(image) == 0 || CGImageGetHeight(image) == 0) {
 		
     return [UIColor colorWithRed:r green:g blue:b alpha:a];
 }
-
-#if 0   // forget why I might want this - just download it no?
-// How to render it http://stackoverflow.com/questions/5526545/render-large-catiledlayer-into-smaller-area
-- (UIImage *)image
-{
-    UIGraphicsBeginImageContextWithOptions(self.bounds.size, YES, 0);
-    [self.layer renderInContext:UIGraphicsGetCurrentContext()];
-    UIImage *img = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-    return img;
-}
-#endif
 
 @end

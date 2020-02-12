@@ -21,11 +21,12 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface TilingView : UIView
+
+@property (nonatomic, strong, readonly) TiledImageBuilder *imageBuilder;
 @property (nonatomic, assign) BOOL annotates;
 
 - (id)initWithImageBuilder:(TiledImageBuilder *)imageBuilder;
 - (CGSize)imageSize;
-//- (UIImage *)image;   // forget why this was attempted
 
 @end
 

@@ -33,6 +33,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (CGFloat)scaleToRestoreAfterRotation;
 - (void)restoreCenterPoint:(CGPoint)oldCenter scale:(CGFloat)oldScale;
 
+- (UIImage *)image;   // what's showing
+
 @end
 
 NS_ASSUME_NONNULL_END

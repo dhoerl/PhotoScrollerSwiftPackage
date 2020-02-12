@@ -132,29 +132,33 @@ static BOOL _annotateTiles;
     self.zoomScale = 1.0;
 
 	if([obj isKindOfClass:[TiledImageBuilder class]]) {
-		TiledImageBuilder *tiledImage = (TiledImageBuilder *)obj;
-		size = [tiledImage imageSize];
+		TiledImageBuilder *imageBuilder = (TiledImageBuilder *)obj;
+        // make a new TilingView for the new image
+        TilingView *view = [[TilingView alloc] initWithImageBuilder:imageBuilder];
+        view.annotates = ImageScrollView.annotateTiles;
+        self.imageView =  view;
 
-		// make a new TilingView for the new image
-		TilingView *view = [[TilingView alloc] initWithImageBuilder:tiledImage];
-		view.annotates = ImageScrollView.annotateTiles;
-		self.imageView =  view;
+        size = [imageBuilder imageSize];
 		scale = [[UIScreen mainScreen] scale];
 	} else
 	if([obj isKindOfClass:[TilingView class]]) {
 		TilingView *view = (TilingView *)obj;
 		view.annotates = ImageScrollView.annotateTiles;
 		self.imageView =  view;
+
+        size = [view.imageBuilder imageSize];
 		scale = [[UIScreen mainScreen] scale];
 	} else
 	if([obj isKindOfClass:[UIImageView class]]) {
 		UIImageView *iv = (UIImageView *)obj;
-		size = iv.image.size;
-		self.imageView = (UIView *)obj;
+        self.imageView = (UIView *)obj;
+
+        size = iv.image.size;
 		scale = 1;
 	} else {
 		NSLog(@"CLASS %@", NSStringFromClass([obj class]));
 		assert("Not of the correct class" == NULL);
+        exit(0);
 	}
 	
 	[self addSubview:_imageView];
@@ -255,6 +259,17 @@ static BOOL _annotateTiles;
     offset.x = MAX(minOffset.x, MIN(maxOffset.x, offset.x));
     offset.y = MAX(minOffset.y, MIN(maxOffset.y, offset.y));
     self.contentOffset = offset;
+}
+
+// This works even with CATiledLayers backing the enclosed view
+// Inspired by https://gist.github.com/nitrag/b3117a4b6b8e89fdbc12b98029cf98f8
+- (UIImage *)image
+{
+    UIGraphicsBeginImageContextWithOptions(self.frame.size, YES, 0);
+    [self drawViewHierarchyInRect:self.frame afterScreenUpdates:YES];
+    UIImage *img = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return img;
 }
 
 @end

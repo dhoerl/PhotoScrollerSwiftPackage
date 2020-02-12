@@ -66,7 +66,6 @@
 #if MMAP_DEBUGGING == 1
 			LOG(@"UNMAP[%d]: addr=%p 0x%X bytes", im->map.fd, im->map.emptyAddr, (NSUInteger)im->map.mappedSize);
 #endif
-			assert(ret == 0);
 			if(ret) self.failed = YES;
 		} else {
 			iptr = tileIptr + im->map.emptyTileRowSize;
@@ -82,50 +81,8 @@
 #if MMAP_DEBUGGING == 1
 		LOG(@"UNMAP[%d]: addr=%p 0x%X bytes", im->map.fd, im->map.emptyAddr, (NSUInteger)im->map.mappedSize);
 #endif
-		assert(ret==0);
 		if(ret) self.failed = YES;
-
-		// don't need the scratch space now
-		[self truncateEmptySpace:im];
-	
-		/*
-		 * Best place I could find to flush dirty blocks to disk. Will flush whole file if doing full image decodes,
-		 * but only partial files for incremental loader
-		 */
-		int fd = im->map.fd;
-		assert(fd != -1);
-		int file_size = (int)lseek(fd, 0, SEEK_END);
-		//OSAtomicAdd32Barrier(file_size, &ubc_usage);
-        [self updateUbc:file_size];
-
-
-		if([TiledImageBuilder ubcUsage] > self.ubc_threshold) {
-            //if(OSAtomicCompareAndSwap32(0, 1, &fileFlushGroupSuspended)) {
-            if([self compareFlushGroupSuspendedExpected:false desired:true]) {
-				// LOG(@"SUSPEND==========================================================usage=%d thresh=%d", ubc_usage, ubc_thresh);
-				dispatch_suspend([TiledImageBuilder fileFlushQueue]);
-				dispatch_group_async([TiledImageBuilder fileFlushGroup], [TiledImageBuilder fileFlushQueue], ^{ LOG(@"unblocked!"); } );
-			}
-            [self freeMemory:[NSString stringWithFormat:@"Exceeded threshold: usage=%lld thresh=%lld", [TiledImageBuilder ubcUsage], self.ubc_threshold]];
-		} else {
-            [self freeMemory:[NSString stringWithFormat:@"Under threshold: usage=%lld thresh=%lld", [TiledImageBuilder ubcUsage], self.ubc_threshold]];
-        }
-
-		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^
-			{
-				// need to make sure file is kept open til we flush - who knows what will happen otherwise
-				int ret2 = fcntl(fd,  F_FULLFSYNC);
-				if(ret2 == -1) LOG(@"ERROR: failed to sync fd=%d", fd);
-                [self updateUbc:-file_size];
-				//OSAtomicAdd32Barrier(-file_size, &ubc_usage);
-				if([TiledImageBuilder ubcUsage] <= self.ubc_threshold) {
-                    if([self compareFlushGroupSuspendedExpected:true desired:false]) {
-					//if(OSAtomicCompareAndSwap32(1, 0, &fileFlushGroupSuspended)) {
-						dispatch_resume([TiledImageBuilder fileFlushQueue]);
-					}
-				}
-			} );
-
+        [self writeToFileSystem:im];
 	}
 	
 	return YES;

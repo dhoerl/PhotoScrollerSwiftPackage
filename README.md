@@ -1,25 +1,36 @@
 # PhotoScrollerSwiftPackage
-Extract PhotoScrollerNetwork into a Swift Package
+Extract *JPEG* processing and display from [PhotoScrollerNetwork](https://github.com/dhoerl/PhotoScrollerNetwork) into a *Swift Package*. Based on Apple's PhotoScroller sample code, this package adds the ability to process jpeg in chunks (web fetch), then host image tiles so that massive images can be displayed zoomed out (to fit the enclosing viw), or zoomed in to their actual pixels.
 
-Version 0.4.0: this Swift Package is now usable. For usage look at the related PhotoScrollerNetworkTest
-  project. Essentially TiledImageBuilder now offers a NSOutputStream interface, so you open it,
-  feed it data chunks with write, then close it. The demo project shows how you can use local files
-  as well as ones on the web.
+* Version 0.4.1: New feature: request a snapshot of the current display within the scrollview.
+* Version 0.4.0:
+Now usable! For usage look at the related [PhotoScrollerNetwork2](https://github.com/dhoerl/PhotoScrollerNetwork2) project. The *TiledImageBuilder* now offers a *NSOutputStream* interface, so you open it, feed it data chunks, then close it. The demo project shows how you can use both local files as well as ones fetched from the internet.
 
-Usage:
+## Features
 
-1) Add the Package using Xcode->File->Packages with the URL of https://github.com/dhoerl/PhotoScrollerSwiftPackage.
+Apple's PhotoScroller project lets you display huge images using CATiledLayer, but only if
+you pretile them first! My PhotoNetworkScroller project supports tiling large local
+files and network fetches.
 
-2) Open the Build Phases, and in the Package shown in the left file pane, drag the Libraries/libturbojpeg.a file into the link
-   section. It will appear just above the PhotoScrollerSwiftPackage that should already be there
+This package:
 
-3) In Build settings, under library search paths, add:
-   "$(BUILD_DIR)/../../SourcePackages/checkouts/PhotoScrollerSwiftPackage/Libraries"
+- blazingly fast tile rendering - visually much much faster than Apple's code (which uses png files in the file system)
+- you supply a single jpeg file or URL and this code does all the tiling for you, quickly and painlessly
+- builds on Apple's PhotoScroller project by addressing its deficiencies (mostly the pretiled images)
+- provides the means to process very large images for use in a zoomable ScrollView (provided)
+- acked by a CATiledLayer so that only those tiles needed for display consume memory
+- each zoom level has one dedicated temp file rearranged into tiles for rapid tile access & rendering
 
-NOTE: If you want to clone the Package and play with the code, then use a different library search path,
- for me this would be /Volumes/Data/git/PhotoScrollerSwiftPackage/Libraries.
+## Usage:
+
+1. Add the Package using Xcode->File->Packages with the URL of https://github.com/dhoerl/PhotoScrollerSwiftPackage.
+2. Open the Build Phases, and in the Package shown in the left file pane, drag the Libraries/libturbojpeg.a file into the link section. It will appear just above the PhotoScrollerSwiftPackage (that should already be there)
+3. In Build settings, under library search paths, add:
+	*"$(BUILD_DIR)/../../SourcePackages/checkouts/PhotoScrollerSwiftPackage/Libraries"*
+
+NOTE: If you want to clone the Package and play with the code, then use a different library search path, for example */Volumes/Data/git/PhotoScrollerSwiftPackage/Libraries*.
 
 
+## Historical
 Feb 11, 2020: Amazingly it's all working. Unit tests in the PhotoScrollerNetworkTest too!
  Really, if I'd known how much work this would be I probably wouldn't have done it. Virtually
  all the libturbojpeg interface code didn't change a bit. I had to update the Atomics to use stdAtomic,
@@ -43,18 +54,3 @@ Feb 1, 2020 : Working on this almost full time. Focused on a test app that will 
   
   Very happy how it progressing, but its taking a lot more time than the original code took (I did most 
   of that in a weekend, believe it or not, but I was a lot younger then too!)
-
-----
-
-Apple's PhotoScroller project lets you display huge images using CATiledLayer, but only if
-you pretile them first! My PhotoNetworkScroller project supports tiling large local
-files and network fetches.
-
-This package:
-
-- blazingly fast tile rendering - visually much much faster than Apple's code (which uses png files in the file system)
-- you supply a single jpeg file or URL and this code does all the tiling for you, quickly and painlessly
-- builds on Apple's PhotoScroller project by addressing its deficiencies (mostly the pretiled images)
-- provides the means to process very large images for use in a zoomable scrollview
-- is backed by a CATiledLayer so that only those tiles needed for display consume memory
-- each zoom level has one dedicated temp file rearranged into tiles for rapid tile access & rendering

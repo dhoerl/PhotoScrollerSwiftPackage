@@ -56,10 +56,12 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) uint64_t finishTime;					// time stamp of when this operation finished  decoding
 @property (nonatomic, assign) uint32_t milliSeconds;				// elapsed time
 @property (nonatomic, assign) int64_t ubc_threshold;				// UBC threshold above which outstanding writes are flushed to the file system (dynamic default)
-@property (nonatomic, assign, readonly) BOOL failed;                // global Error flags
-@property (nonatomic, assign, readonly) BOOL finished;              // image was successfully decoded!
+@property (atomic, assign, readonly) BOOL failed;                   // global Error flags
+@property (atomic, assign, readonly) BOOL finished;                 // image was successfully decoded!
+@property (atomic, assign, readonly) BOOL isCancelled;              // image was successfully decoded!
 
 + (void)setUbcThreshold:(float)val;									// default is 0.5 - Image disk cache can use half of the available free memory pool
++ (int64_t)ubcUsage;                                                // mostly for unit tests - this is the amount of image memory consumed by all current TiledImageBuilders
 
 
 #if LEVELS_INIT == 0
@@ -69,22 +71,17 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithLevels:(NSUInteger)levels orientation:(NSInteger)orientation /* queue:(dispatch_queue_t)queue /* delegate:(NSObject<NSStreamDelegate> *)delegate */);
 #endif
 
-- (CGSize)imageSize;                        // orientation modifies what is downloaded
+- (void)cancel;
+- (CGSize)imageSize;
 
 @end
 
+// Used by the TiledView - not for other uses
 @interface TiledImageBuilder (Draw)
 
 - (__nullable CGImageRef)newImageForScale:(CGFloat)scale location:(CGPoint)pt box:(CGRect)box;
 - (UIImage *)tileForScale:(CGFloat)scale location:(CGPoint)pt; // used when doing drawRect, and now for getImageColor ???
 - (CGAffineTransform)transformForRect:(CGRect)box; //  scale:(CGFloat)scale;
-- (CGPoint)translateTileForScale:(CGFloat)scale location:(CGPoint)origPt;
-
-@end
-
-@interface TiledImageBuilder (JPEG_PUB)
-
-- (BOOL)jpegAdvance:(NSData *)data;
 
 @end
 
