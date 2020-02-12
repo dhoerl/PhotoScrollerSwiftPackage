@@ -110,15 +110,13 @@ static float				ubc_threshold_ratio;
 
 @implementation TiledImageBuilder
 {
-    __weak NSObject<NSStreamDelegate> *delegate;
-
     NSString            *_imagePath;
     BOOL                mapWholeFile;
     NSMutableData       *bufferedData;
     NSStreamStatus      _streamStatus;
     NSError             *_streamError;
     BOOL                _hasSpaceAvailable;
-    //dispatch_queue_t    delegateQueue;
+    BOOL                preDeterminedLevels;
 }
 
 + (void)initialize
@@ -163,83 +161,55 @@ static float				ubc_threshold_ratio;
     return atomic_compare_exchange_strong(&fileFlushGroupSuspended, &expected, desired);
 }
 
-#if LEVELS_INIT == 0
-- (instancetype)initWithSize:(CGSize)sz orientation:(NSInteger)orient /* queue:(dispatch_queue_t)queue  delegate:(NSObject<NSStreamDelegate> *)del */
-{
-	if((self = [self initWithSize:sz])) {
-		_orientation = orient;
-        //delegateQueue = queue;
-        //delegate = del;
-        bufferedData = [NSMutableData new];
-        _streamStatus = NSStreamStatusNotOpen;
-	}
-	return self;
-}
 - (instancetype)initWithSize:(CGSize)sz
 {
-	if((self = [super init])) {
-#if TIMING_STATS == 1 && !defined(NDEBUG)
-		_startTime = [self timeStamp];
-#endif
-		_pageSize	= getpagesize();
-		_size		= sz;
-
-#if 0 // Original Code - looks wrong to me now
-		// Take a big chunk of either free memory or all memory
-		freeMemory fm		= [self freeMemory:@"Initialize"];
-		float freeThresh	= (float)fm.freeMemory*ubc_threshold_ratio;
-		float totalThresh	= (float)fm.totlMemory*ubc_threshold_ratio;
-		_ubc_threshold		= (int64_t)lrintf(MAX(freeThresh, totalThresh));
-        LOG(@"A: freeThresh=%lf totalThresh=%lf ubc_thresh=%lu", (freeThresh), (totalThresh), (long)_ubc_threshold);
-        //[[NSNotificationCenter defaultCenter] addObserver:self selector: @selector(lowMemory:) name:UIApplicationDidReceiveMemoryWarningNotification object:[UIApplication sharedApplication]];
-#else
-        freeMemory fm        = [self freeMemory:@"Initialize"];
-        float freeThresh    = (float)fm.freeMemory*ubc_threshold_ratio;
-        _ubc_threshold        = (int64_t)lrintf(freeThresh);
-        LOG(@"B: freeThresh=%ld ubc_thresh=%ld", (long)(freeThresh/(1024*1024)), (long)(_ubc_threshold/(1024*1024)));
-        LOG(@"C: freeFileSpace=%lld", freeFileSpace());
-#endif
-        _src_mgr            = calloc(1, sizeof(co_jpeg_source_mgr));
-	}
-	return self;
+    self = [self initWithSize:sz orientation:0];
+    return self;
 }
 
-#else
-
-- (instancetype)initWithLevels:(NSUInteger)levels orientation:(NSInteger)orient /* queue:(dispatch_queue_t)queue delegate:(NSStreamDelegate *)del */
+- (instancetype)initWithSize:(CGSize)sz orientation:(NSInteger)orient /* queue:(dispatch_queue_t)queue  delegate:(NSObject<NSStreamDelegate> *)del */
 {
-	if((self = [self initWithLevels:levels])) {
-		_orientation = orient;
-        delegateQueue = queue;
-        delegate = del;
-        bufferedData = [NSMutableData new];
-	}
-	return self;
+    self = [super init];
+    _size = sz;
+    _orientation = orient;
+    [self commonInit];
+    return self;
 }
-- (instancetype)initWithLevels:(NSUInteger)levels
-{
-	if((self = [super init])) {
+
+- (void)commonInit {
 #if TIMING_STATS == 1 && !defined(NDEBUG)
-		startTime = [self timeStamp];
-#endif		
-		zoomLevels = levels;
-		ims = calloc(zoomLevels, sizeof(imageMemory));
-		pageSize = getpagesize();
+    _startTime = [self timeStamp];
+#endif
+    bufferedData    = [NSMutableData new];
+    _streamStatus   = NSStreamStatusNotOpen;
+    _pageSize        = getpagesize();
 
-		// Take a big chunk of either free memory or all memory
-		freeMemory fm		= [self freeMemory:@"Initialize"];
-		float freeThresh	= (float)fm.freeMemory*ubc_threshold_ratio;
-		float totalThresh	= (float)fm.totlMemory*ubc_threshold_ratio;
-		ubc_threshold		= lrintf(MAX(freeThresh, totalThresh));
-
-		src_mgr				= calloc(1, sizeof(co_jpeg_source_mgr));
-		//LOG(@"freeThresh=%d totalThresh=%d ubc_thresh=%d", (int)freeThresh/(1024*1024), (int)totalThresh/(1024*1024), (int)ubc_threshold/(1024*1024));
-		//[[NSNotificationCenter defaultCenter] addObserver:self selector: @selector(lowMemory:) name:UIApplicationDidReceiveMemoryWarningNotification object:[UIApplication sharedApplication]];
-	}
-	return self;
+    freeMemory fm = [self freeMemory:@"Initialize"];
+    float freeThresh = (float)fm.freeMemory*ubc_threshold_ratio;
+    _ubc_threshold = (int64_t)lrintf(freeThresh);
+    LOG(@"B: freeThresh=%ld ubc_thresh=%ld", (long)(freeThresh/(1024*1024)), (long)(_ubc_threshold/(1024*1024)));
+    LOG(@"C: freeFileSpace=%lld", freeFileSpace());
+    _src_mgr = calloc(1, sizeof(co_jpeg_source_mgr));
 }
 
-#endif
+- (instancetype)initWithLevels:(NSInteger)levels
+{
+    self = [self initWithLevels:levels orientation:0];
+    return self;
+}
+
+- (instancetype)initWithLevels:(NSInteger)levels orientation:(NSInteger)orient
+{
+    self = [super init];
+
+    assert(levels > 0);
+    _zoomLevels = levels;
+    _ims = calloc(_zoomLevels, sizeof(imageMemory));
+
+    _orientation = orient;
+    [self commonInit];
+	return self;
+}
 
 - (void)dealloc
 {
@@ -514,7 +484,7 @@ static float				ubc_threshold_ratio;
 
 - (uint64_t)timeStamp
 {
-	return mach_absolute_time();
+	return clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
 }
 
 - (freeMemory)freeMemory:(NSString *)msg {

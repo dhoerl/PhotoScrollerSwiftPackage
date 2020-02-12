@@ -18,7 +18,6 @@
 #define MEMORY_DEBUGGING        0        // set to 1 if you want to see how memory changes when images are processed
 #define MMAP_DEBUGGING          0        // set to 1 to see how mmap/munmap working
 #define MAPPING_IMAGES          0        // set to 1 to use MMAP for image tile retrieval - if 0 use pread
-#define LEVELS_INIT             0        // set to 1 if you want to specify the levels in the init method instead of using the target view size
 
 @import Foundation;
 
@@ -123,22 +122,23 @@ typedef struct {
 	boolean							jpegFailed;
 } co_jpeg_source_mgr;
 
-/* Will figure out a way to make these static again
-extern dispatch_queue_t		fileFlushQueue;
-extern dispatch_group_t		fileFlushGroup;
-extern float				ubc_threshold_ratio;
-*/
 
 @interface TiledImageBuilder ()
-@property (nonatomic, strong, readwrite) NSDictionary *properties;
-@property (atomic, assign, readwrite) BOOL failed;                   // global Error flags
-@property (atomic, assign, readwrite) BOOL finished;                 // image was successfully decoded!
-@property (atomic, assign, readwrite) BOOL isCancelled;              // image was successfully decoded!
+@property (nonatomic, strong, readwrite) NSDictionary *properties;	// image properties from CGImageSourceCopyPropertiesAtIndex()
+@property (nonatomic, assign, readwrite) NSInteger orientation;		// 0 == automatically set using EXIF orientation from image
+@property (nonatomic, assign, readwrite) NSUInteger zoomLevels;		// explose the init setting
+@property (nonatomic, assign, readwrite) uint64_t startTime;		// time stamp of when this operation started decoding
+@property (nonatomic, assign, readwrite) uint64_t finishTime;		// time stamp of when this operation finished  decoding
+@property (nonatomic, assign, readwrite) uint32_t milliSeconds;     // elapsed time
+
+@property (atomic, assign, readwrite) BOOL failed;                  // global Error flags
+@property (atomic, assign, readwrite) BOOL finished;                // image was successfully decoded!
+@property (atomic, assign, readwrite) BOOL isCancelled;             // image was successfully decoded!
 
 @property (nonatomic, assign) imageMemory *ims;
 @property (nonatomic, assign) FILE *imageFile;
 @property (nonatomic, assign) size_t pageSize;
-@property (nonatomic, assign) CGSize size;
+@property (nonatomic, assign) CGSize size;                          // initWithSize - the hosting scrollview's bounds.size
 
 @property (nonatomic, assign) co_jpeg_source_mgr *src_mgr;			// input
 

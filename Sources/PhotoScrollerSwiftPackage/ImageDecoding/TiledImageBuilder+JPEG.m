@@ -141,10 +141,10 @@ static void term_source(j_decompress_ptr cinfo);
 		assert(width > 0 && height > 0);
 		//LOG(@"WID=%d HEIGHT=%d", src_mgr->cinfo.image_width, src_mgr->cinfo.image_height);
 
-#if LEVELS_INIT == 0
-		self.zoomLevels = [self zoomLevelsForSize:CGSizeMake(width, height)];
-		self.ims = calloc(self.zoomLevels, sizeof(imageMemory));
-#endif
+        if(self.zoomLevels == 0) {
+            self.zoomLevels = [self zoomLevelsForSize:CGSizeMake(width, height)];
+            self.ims = calloc(self.zoomLevels, sizeof(imageMemory));
+        }
 		// Create files
 		size_t scale = 1;
 		for(size_t idx=0; idx<self.zoomLevels; ++idx) {

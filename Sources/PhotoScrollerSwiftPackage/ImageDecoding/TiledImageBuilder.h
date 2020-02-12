@@ -50,26 +50,24 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface TiledImageBuilder : NSOutputStream
 @property (nonatomic, strong, readonly) NSDictionary *properties;	// image properties from CGImageSourceCopyPropertiesAtIndex()
-@property (nonatomic, assign) NSInteger orientation;				// 0 == automatically set using EXIF orientation from image
-@property (nonatomic, assign) NSUInteger zoomLevels;				// explose the init setting
-@property (nonatomic, assign) uint64_t startTime;					// time stamp of when this operation started decoding
-@property (nonatomic, assign) uint64_t finishTime;					// time stamp of when this operation finished  decoding
-@property (nonatomic, assign) uint32_t milliSeconds;				// elapsed time
-@property (nonatomic, assign) int64_t ubc_threshold;				// UBC threshold above which outstanding writes are flushed to the file system (dynamic default)
+@property (nonatomic, assign, readonly) NSInteger orientation;		// 0 == automatically set using EXIF orientation from image
+@property (nonatomic, assign, readonly) NSUInteger zoomLevels;		// explose the init setting
+@property (nonatomic, assign, readonly) uint64_t startTime;			// time stamp of when this operation started decoding
+@property (nonatomic, assign, readonly) uint64_t finishTime;		// time stamp of when this operation finished  decoding
+@property (nonatomic, assign, readonly) uint32_t milliSeconds;		// elapsed time
 @property (atomic, assign, readonly) BOOL failed;                   // global Error flags
 @property (atomic, assign, readonly) BOOL finished;                 // image was successfully decoded!
 @property (atomic, assign, readonly) BOOL isCancelled;              // image was successfully decoded!
 
+@property (nonatomic, assign) int64_t ubc_threshold;                // UBC threshold above which outstanding writes are flushed to the file system (dynamic default)
+
 + (void)setUbcThreshold:(float)val;									// default is 0.5 - Image disk cache can use half of the available free memory pool
 + (int64_t)ubcUsage;                                                // mostly for unit tests - this is the amount of image memory consumed by all current TiledImageBuilders
 
-
-#if LEVELS_INIT == 0
-- (instancetype)initWithSize:(CGSize)sz orientation:(NSInteger)orientation /* queue:(dispatch_queue_t)queue delegate:(NSObject<NSStreamDelegate> *)delegate */;
-
-#else
-- (instancetype)initWithLevels:(NSUInteger)levels orientation:(NSInteger)orientation /* queue:(dispatch_queue_t)queue /* delegate:(NSObject<NSStreamDelegate> *)delegate */);
-#endif
+- (instancetype)initWithSize:(CGSize)sz;                                                // orientation determined by the image
+- (instancetype)initWithSize:(CGSize)sz orientation:(NSInteger)orientation;             // size == the hosting scrollview bounds.size
+- (instancetype)initWithLevels:(NSInteger)levels;                                       // orientation determined by the image
+- (instancetype)initWithLevels:(NSInteger)levels orientation:(NSInteger)orientation;    // force possibly more levels
 
 - (void)cancel;
 - (CGSize)imageSize;
