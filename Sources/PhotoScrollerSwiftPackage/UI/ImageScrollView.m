@@ -27,11 +27,17 @@
 #define LOG(...)
 #endif
 
+typedef struct {
+    CGRect drawRect;
+    CGSize imageSize;
+} ImageSpecs;
+
 static BOOL _annotateTiles;
 
 @implementation ImageScrollView
 {
-	CGFloat scale;
+    CGFloat scale;
+    ImageSpecs imageSpecs;  // used when grabbing the displayed content
 }
 
 + (BOOL)annotateTiles
@@ -51,6 +57,8 @@ static BOOL _annotateTiles;
         self.bouncesZoom = YES;
         self.decelerationRate = UIScrollViewDecelerationRateNormal; // DFH UIScrollViewDecelerationRateFast;
         self.delegate = self;
+
+self.backgroundColor = [UIColor yellowColor];
     }
     return self;
 }
@@ -78,26 +86,30 @@ static BOOL _annotateTiles;
 
     if(!_imageView) { return; }
 
-
-//NSLog(@"LAYOUT SUBVIEWS %@", NSStringFromCGRect(self.frame));
-
-    // center the image as it becomes smaller than the size of the screen
-    
+    // center the image as it becomes smaller than the size of the screen, and calculate specs for any drawn image
     CGSize boundsSize = self.bounds.size;
-    CGRect frameToCenter = _imageView.frame;
-    
+    CGRect frameToCenter = CGRectIntegral(_imageView.frame);
+    CGRect imageFrame = CGRectMake(0, 0, self.frame.size.width, self.frame.size.height);
+
     // center horizontally
-    if (frameToCenter.size.width < boundsSize.width)
-        frameToCenter.origin.x = (boundsSize.width - frameToCenter.size.width) / 2;
-    else
+    if (frameToCenter.size.width < boundsSize.width) {
+        CGFloat offset = rint(boundsSize.width - frameToCenter.size.width);
+        frameToCenter.origin.x = offset / 2;
+        boundsSize.width -= offset;
+        imageFrame.origin.x = -frameToCenter.origin.x;
+    } else {
         frameToCenter.origin.x = 0;
-    
+    }
+
     // center vertically
-    if (frameToCenter.size.height < boundsSize.height)
-        frameToCenter.origin.y = (boundsSize.height - frameToCenter.size.height) / 2;
-    else
+    if (frameToCenter.size.height < boundsSize.height) {
+        CGFloat offset = rint(boundsSize.height - frameToCenter.size.height);
+        frameToCenter.origin.y = offset / 2;
+        boundsSize.height -= offset;
+        imageFrame.origin.y = -frameToCenter.origin.y;
+    } else {
         frameToCenter.origin.y = 0;
-    
+    }
     _imageView.frame = frameToCenter;
     
     if ([_imageView isKindOfClass:[TilingView class]]) {
@@ -106,6 +118,9 @@ static BOOL _annotateTiles;
         // which would cause the CATiledLayer to ask us for tiles of the wrong scales.)
         _imageView.contentScaleFactor = 1.0;
     }
+
+    imageSpecs.drawRect = imageFrame;
+    imageSpecs.imageSize = boundsSize;
 }
 
 #pragma mark -
@@ -198,10 +213,7 @@ static BOOL _annotateTiles;
     
     self.maximumZoomScale = maxScale;
     self.minimumZoomScale = minScale;
-
-//NSLog(@"CALC MAX %f MIN %f", self.maximumZoomScale, self.minimumZoomScale);
-
-//    [self setNeedsDisplay];
+    //NSLog(@"CALC MAX %f MIN %f", self.maximumZoomScale, self.minimumZoomScale);
 }
 
 #pragma mark -
@@ -221,9 +233,9 @@ static BOOL _annotateTiles;
     
     // If we're at the minimum zoom scale, preserve that by returning 0, which will be converted to the minimum
     // allowable scale when the scale is restored.
-    if (contentScale <= self.minimumZoomScale + FLT_EPSILON)
+    if (contentScale <= self.minimumZoomScale + FLT_EPSILON) {
         contentScale = 0;
-    
+    }
     return contentScale;
 }
 
@@ -264,11 +276,20 @@ static BOOL _annotateTiles;
 // Inspired by https://gist.github.com/nitrag/b3117a4b6b8e89fdbc12b98029cf98f8
 - (UIImage *)image
 {
-    UIGraphicsBeginImageContextWithOptions(self.frame.size, YES, 0);
-    [self drawViewHierarchyInRect:self.frame afterScreenUpdates:YES];
+    UIGraphicsBeginImageContextWithOptions(imageSpecs.imageSize, YES, 0);       // if smaller than view size, clips (we want that)
+    [self drawViewHierarchyInRect:imageSpecs.drawRect afterScreenUpdates:NO];  // must be same size as the view being drawn. Use NO otherwise iOS complains
     UIImage *img = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     return img;
 }
 
 @end
+
+//- (ImageSpecs)frammer
+//{
+//NSLog(@"FRAME %@", NSStringFromCGRect(self.frame));
+//NSLog(@"BOUNDS %@", NSStringFromCGRect(self.bounds));
+//NSLog(@"CONTENT SIZE%@", NSStringFromCGSize(self.contentSize));
+//NSLog(@"CONTENT OFFSET %@", NSStringFromCGPoint(self.contentOffset));
+//NSLog(@"IV FRAME %@", NSStringFromCGRect(_imageView.frame));
+//
