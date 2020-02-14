@@ -143,15 +143,9 @@ typedef struct {
 @property (nonatomic, assign) co_jpeg_source_mgr *src_mgr;			// input
 
 + (CGColorSpaceRef)colorSpace;
-+ (dispatch_group_t)fileFlushGroup;
-+ (dispatch_queue_t)fileFlushQueue;
-+ (void)updateUbc:(int64_t)value;
-+ (bool)compareFlushGroupSuspendedExpected:(bool)expectedP desired:(bool)desired;
 
 - (void)mapMemoryForIndex:(size_t)idx width:(size_t)w height:(size_t)h;
 - (void)writeToFileSystem:(imageMemory *)im;
-
-- (uint64_t)timeStamp;
 
 - (NSUInteger)zoomLevelsForSize:(CGSize)imageSize;
 

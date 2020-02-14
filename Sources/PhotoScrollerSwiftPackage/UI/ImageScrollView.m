@@ -285,6 +285,23 @@ self.backgroundColor = [UIColor yellowColor];
 
 @end
 
+//// Inspired by https://gist.github.com/nitrag/b3117a4b6b8e89fdbc12b98029cf98f8
+//+ (UIImage *)imageFromView:(UIView *)view subsection:(CGRect)subRect
+//{
+//    // Image will be sized to the smaller rectangle
+//    UIGraphicsBeginImageContextWithOptions(subRect.size, YES, 0);
+//
+//    // The primary view needs to shift up and left so the desired rect is visible
+//    // But the rect passed below needs to be sized to the view, otherwise the image is compressed
+//    CGRect drawRect = CGRectMake(-subRect.origin.x, -subRect.origin.x, view.bounds.size.width, view.bounds.size.height);
+//
+//    [view drawViewHierarchyInRect:drawRect afterScreenUpdates:NO];  // I got compiler complaints using YES ???
+//
+//    UIImage *img = UIGraphicsGetImageFromCurrentImageContext();
+//    UIGraphicsEndImageContext();
+//    return img;
+//}
+
 //- (ImageSpecs)frammer
 //{
 //NSLog(@"FRAME %@", NSStringFromCGRect(self.frame));

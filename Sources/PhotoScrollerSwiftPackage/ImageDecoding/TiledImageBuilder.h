@@ -60,9 +60,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (atomic, assign, readonly) BOOL isCancelled;              // image was successfully decoded!
 
 @property (nonatomic, assign) int64_t ubc_threshold;                // UBC threshold above which outstanding writes are flushed to the file system (dynamic default)
+@property (class, assign, readonly) int64_t ubcUsage;               // current outstanding fil;e system writes
 
 + (void)setUbcThreshold:(float)val;									// default is 0.5 - Image disk cache can use half of the available free memory pool
-+ (int64_t)ubcUsage;                                                // mostly for unit tests - this is the amount of image memory consumed by all current TiledImageBuilders
 
 - (instancetype)initWithSize:(CGSize)sz;                                                // orientation determined by the image
 - (instancetype)initWithSize:(CGSize)sz orientation:(NSInteger)orientation;             // size == the hosting scrollview bounds.size

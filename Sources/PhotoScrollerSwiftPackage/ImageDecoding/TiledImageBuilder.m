@@ -82,13 +82,6 @@ static uint64_t DeltaMAT(uint64_t then, uint64_t now)
 
 	return (uint64_t)((double)delta / 1e6); // ms
 }
-	 
-#if 0
-static void foo(int sig)
-{
-	LOG(@"YIKES: got signal %d", sig);
-}
-#endif
 
 /*
  * We use a dispatch_grpoup so we can "block" on access to it, when memory pressure looks high.
@@ -98,7 +91,6 @@ static void foo(int sig)
  * When a file is sync'd to disk, usage goes up by its size, and decremented when the sync is complete.
  * The ratio is used to compute a threshold (see the code).
  */
- // Will figure a way to make these static again soon
 
 static atomic_int_fast64_t  _incr = ATOMIC_VAR_INIT(0);
 static atomic_int_fast64_t  ubc_usage = ATOMIC_VAR_INIT(0); // rough idea of what our buffer cache usage is
@@ -123,11 +115,11 @@ static float				ubc_threshold_ratio;
 {
 	if(self == [TiledImageBuilder class]) {
 		colorSpace = CGColorSpaceCreateDeviceRGB();
+        ubc_threshold_ratio = 0.5f;    // default ratio - can override with class method below
 
-		fileFlushQueue = dispatch_queue_create("com.dfh.TiledImageBuilder", DISPATCH_QUEUE_SERIAL);
-		fileFlushGroup = dispatch_group_create();
-		ubc_threshold_ratio = 1.0f;	// default ration - can override with class method below
-		//for(int i=0; i<=31; ++i) signal(i, foo);	// trying to find out why system was killing me - never did
+        fileFlushGroup = dispatch_group_create();
+        fileFlushQueue = dispatch_queue_create("com.pssp.TiledImageBuilder", DISPATCH_QUEUE_SERIAL);
+        dispatch_set_target_queue(fileFlushQueue, dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0));
 	}
 }
 + (CGColorSpaceRef)colorSpace
@@ -138,14 +130,14 @@ static float				ubc_threshold_ratio;
 {
 	ubc_threshold_ratio = val;
 }
-+ (dispatch_queue_t)fileFlushQueue
-{
-	return fileFlushQueue;
-}
-+ (dispatch_group_t)fileFlushGroup
-{
-	return fileFlushGroup;
-}
+//+ (dispatch_queue_t)fileFlushQueue
+//{
+//	return fileFlushQueue;
+//}
+//+ (dispatch_group_t)fileFlushGroup
+//{
+//	return fileFlushGroup;
+//}
 + (int64_t)ubcUsage
 {
     return atomic_load(&ubc_usage);
@@ -309,7 +301,9 @@ static float				ubc_threshold_ratio;
 - (void)mapMemoryForIndex:(size_t)idx width:(size_t)w height:(size_t)h
 {
 	// Don't open another file til memory pressure has dropped
+    assert(!NSThread.isMainThread);
 	dispatch_group_wait(fileFlushGroup, DISPATCH_TIME_FOREVER);
+
 	imageMemory *imsP = &_ims[idx];
 	
 	imsP->map.width = w;
@@ -318,12 +312,6 @@ static float				ubc_threshold_ratio;
 	imsP->index = idx;
 	imsP->rows = calcDimension(imsP->map.height)/tileDimension;
 	imsP->cols = calcDimension(imsP->map.width)/tileDimension;
-#if 0
-#error This exposed a compiler bug
-	mapper *mapP = &imsP->map;
-	imsP->col0offset = see below;
-	imsP->row0offset = see below
-#else
 	[self mapMemory:&imsP->map];
 	
 	{
@@ -361,7 +349,6 @@ static float				ubc_threshold_ratio;
 
 - (void)mapMemory:(mapper *)mapP
 {
-#endif
 	mapP->bytesPerRow = calcBytesPerRow(mapP->width);
 	mapP->emptyTileRowSize = mapP->bytesPerRow * tileDimension;
 	mapP->mappedSize = mapP->bytesPerRow * calcDimension(mapP->height) + mapP->emptyTileRowSize;
@@ -425,7 +412,6 @@ static float				ubc_threshold_ratio;
 		CGContextRelease(context);
 
 		madvise(_ims[0].map.addr, _ims[0].map.mappedSize-_ims[0].map.emptyTileRowSize, MADV_FREE); // MADV_DONTNEED
-
 #if MEMORY_DEBUGGING == 1
 		[self freeMemory:@"drawImage done"];
 #endif
@@ -449,8 +435,10 @@ static float				ubc_threshold_ratio;
         //if(OSAtomicCompareAndSwap32(0, 1, &fileFlushGroupSuspended)) {
         if([TiledImageBuilder compareFlushGroupSuspendedExpected:false desired:true]) {
             // LOG(@"SUSPEND==========================================================usage=%d thresh=%d", ubc_usage, ubc_thresh);
-            dispatch_suspend([TiledImageBuilder fileFlushQueue]);
-            dispatch_group_async([TiledImageBuilder fileFlushGroup], [TiledImageBuilder fileFlushQueue], ^{ LOG(@"unblocked!"); } );
+            dispatch_suspend(fileFlushQueue);
+#if MEMORY_DEBUGGING
+            LOG(@"Blocked File Flush Queue");
+#endif
         }
 #if MEMORY_DEBUGGING
         [self freeMemory:[NSString stringWithFormat:@"Exceeded threshold: usage=%lld thresh=%lld", [TiledImageBuilder ubcUsage], self.ubc_threshold]];
@@ -462,13 +450,16 @@ static float				ubc_threshold_ratio;
     }
 
     __typeof__(self) __weak weakSelf = self;
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^
+    dispatch_group_async(fileFlushGroup, fileFlushQueue, ^
         {
             // Always do this - keep the usage correct even if cancelled
             [TiledImageBuilder updateUbc:-file_size];
             if([TiledImageBuilder ubcUsage] <= threshold) {
                 if([TiledImageBuilder compareFlushGroupSuspendedExpected:true desired:false]) {
-                    dispatch_resume([TiledImageBuilder fileFlushQueue]);
+                    dispatch_resume(fileFlushQueue);
+#if MEMORY_DEBUGGING
+                    LOG(@"unblocked File Flush Queue");
+#endif
                 }
             }
             // only reason for this is to not sync the file if we're getting cancelled
@@ -648,5 +639,3 @@ static freeMemory memoryStats() {
 }
 
 @end
-
-
