@@ -18,7 +18,7 @@
 #import "../ImageDecoding/TiledImageBuilder-Private.h"
 
 #if 0	// 0 == no debug, 1 == lots of mesages
-#define LOG(...) NSLog(@"TB-Draw: " __VA_ARGS__)    // joins the string here and the first varargs
+#define LOG(...) NSLog(@"TB-Draw: " __VA_ARGS__)	// joins the string here and the first varargs
 #else
 #define LOG(...)
 #endif
@@ -26,13 +26,13 @@
 static inline long offsetFromScale(float scale) { long s = lrintf(1/scale); long idx = 0; while(s > 1) { s /= 2.0f; ++idx; } return idx; }
 
 static size_t PhotoScrollerProviderGetBytesAtPosition (
-    void *info,
-    void *buffer,
-    off_t position,
-    size_t count
+	void *info,
+	void *buffer,
+	off_t position,
+	size_t count
 );
 static void PhotoScrollerProviderReleaseInfoCallback (
-    void *info
+	void *info
 );
 
 @implementation TiledImageBuilder (Draw)
@@ -105,7 +105,7 @@ static void PhotoScrollerProviderReleaseInfoCallback (
 	   4*bitsPerComponent,
 	   tileBytesPerRow,
 	   [TiledImageBuilder colorSpace],
-	   kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little,	// kCGImageAlphaPremultipliedFirst kCGImageAlphaPremultipliedLast        kCGBitmapByteOrder32Big kCGBitmapByteOrder32Little
+	   kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little,	// kCGImageAlphaPremultipliedFirst kCGImageAlphaPremultipliedLast		 kCGBitmapByteOrder32Big kCGBitmapByteOrder32Little
 	   dataProvider,
 	   NULL,
 	   false,
@@ -152,7 +152,7 @@ static void PhotoScrollerProviderReleaseInfoCallback (
 	return newPt;
 }
 
-- (CGAffineTransform)transformForRect:(CGRect)box//  scale:(CGFloat)scale
+- (CGAffineTransform)transformForRect:(CGRect)box//	 scale:(CGFloat)scale
 {
 	// origin is a 0, 0
 	CGAffineTransform transform = CGAffineTransformIdentity;
@@ -219,10 +219,10 @@ static void PhotoScrollerProviderReleaseInfoCallback (
 @end
 
 static size_t PhotoScrollerProviderGetBytesAtPosition (
-    void *info,
-    void *buffer,
-    off_t position,
-    size_t origCount
+	void *info,
+	void *buffer,
+	off_t position,
+	size_t origCount
 ) {
 	imageMemory *im = (imageMemory *)info;
 
@@ -238,11 +238,11 @@ static size_t PhotoScrollerProviderGetBytesAtPosition (
 	}
 	//LOG(@"Draw col=%ld rowl%ld", im->col, im->row);
 
-#if MAPPING_IMAGES == 1	
+#if MAPPING_IMAGES == 1 
 	// Turning the NOCACHE flag off might up performance, but really clog the system
 	// Note that the OS calls this on multiple threads. Thus, we cannot read directly from the file - we'd have to single thread those reads.
 	// mmap lets us map as many areas as we need.
-	unsigned char *startPtr = mmap(NULL, mapSize, PROT_READ, MAP_FILE | MAP_SHARED | MAP_NOCACHE, im->map.fd, offset);  /*| MAP_NOCACHE */
+	unsigned char *startPtr = mmap(NULL, mapSize, PROT_READ, MAP_FILE | MAP_SHARED | MAP_NOCACHE, im->map.fd, offset);	/*| MAP_NOCACHE */
 	if(startPtr == MAP_FAILED) {
 		//LOG(@"errno4=%s", strerror(errno) );
 		return 0;
@@ -261,7 +261,7 @@ static size_t PhotoScrollerProviderGetBytesAtPosition (
 }
 
 static void PhotoScrollerProviderReleaseInfoCallback (
-    void *info
+	void *info
 ) {
 	free(info);
 }
@@ -275,20 +275,20 @@ For convenience, here is what the letter F would look like if it were tagged cor
  
 PHASE 1
 
-  1        2       3      4         5            6           7          8
+  1		   2	   3	  4			5			 6			 7			8
 
-888888  888888      88  88      8888888888  88                  88  8888888888
-88          88      88  88      88  88      88  88          88  88      88  88
-8888      8888    8888  8888    88          8888888888  8888888888          88
-88          88      88  88
-88          88  888888  888888
+888888	888888		88	88		8888888888	88					88	8888888888
+88			88		88	88		88	88		88	88			88	88		88	88
+8888	  8888	  8888	8888	88			8888888888	8888888888			88
+88			88		88	88
+88			88	888888	888888
 
 PHASE 3
 
-888888  888888      88  88      8888888888  8888888888          88  88
-88          88      88  88      88  88          88  88      88  88  88  88
-8888      8888    8888  8888    88                  88  8888888888  8888888888
-88          88      88  88
-88          88  888888  888888
+888888	888888		88	88		8888888888	8888888888			88	88
+88			88		88	88		88	88			88	88		88	88	88	88
+8888	  8888	  8888	8888	88					88	8888888888	8888888888
+88			88		88	88
+88			88	888888	888888
 
 #endif

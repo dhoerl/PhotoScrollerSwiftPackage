@@ -18,7 +18,7 @@
 #import "../ImageDecoding/TiledImageBuilder-Private.h"
 
 #if 0	// 0 == no debug, 1 == lots of mesages
-#define LOG(...) NSLog(@"TB-JPG: " __VA_ARGS__)    // joins the string here and the first varargs
+#define LOG(...) NSLog(@"TB-JPG: " __VA_ARGS__)	   // joins the string here and the first varargs
 #else
 #define LOG(...)
 #endif
@@ -57,8 +57,8 @@ static void term_source(j_decompress_ptr cinfo);
 	if(final) {
 		im = self.ims;
 		for(size_t idx=0; idx<self.zoomLevels; ++idx, ++im) {
-            [self writeToFileSystem:im];
-        }
+			[self writeToFileSystem:im];
+		}
 	}
 	return YES;
 }
@@ -74,7 +74,7 @@ static void term_source(j_decompress_ptr cinfo);
 		self.failed = YES;
 		return;
 	}
-	int ret = fcntl(jfd, F_NOCACHE, 1);	// don't clog up the system's disk cache
+	int ret = fcntl(jfd, F_NOCACHE, 1); // don't clog up the system's disk cache
 	if(ret == -1) {
 		LOG(@"Warning: cannot turn off cacheing for input file (errno %d).", errno);
 	}
@@ -141,10 +141,10 @@ static void term_source(j_decompress_ptr cinfo);
 		assert(width > 0 && height > 0);
 		//LOG(@"WID=%d HEIGHT=%d", src_mgr->cinfo.image_width, src_mgr->cinfo.image_height);
 
-        if(self.zoomLevels == 0) {
-            self.zoomLevels = [self zoomLevelsForSize:CGSizeMake(width, height)];
-            self.ims = calloc(self.zoomLevels, sizeof(imageMemory));
-        }
+		if(self.zoomLevels == 0) {
+			self.zoomLevels = [self zoomLevelsForSize:CGSizeMake(width, height)];
+			self.ims = calloc(self.zoomLevels, sizeof(imageMemory));
+		}
 		// Create files
 		size_t scale = 1;
 		for(size_t idx=0; idx<self.zoomLevels; ++idx) {
@@ -207,7 +207,7 @@ static void term_source(j_decompress_ptr cinfo);
 	imageMemory *imP = self.ims;
 
 	// Does one at a time
-	while(src_mgr->cinfo.output_scanline <  src_mgr->cinfo.image_height) {
+	while(src_mgr->cinfo.output_scanline <	src_mgr->cinfo.image_height) {
 		unsigned char *scanPtr;
 		{
 			size_t tmpMapSize = imP->map.bytesPerRow;
@@ -218,7 +218,7 @@ static void term_source(j_decompress_ptr cinfo);
 			tmpMapSize += over;
 			
 			imP->map.mappedSize = tmpMapSize;
-			imP->map.addr = mmap(NULL, imP->map.mappedSize, PROT_READ | PROT_WRITE, MAP_FILE | MAP_SHARED, imP->map.fd, offset);	//  | MAP_NOCACHE
+			imP->map.addr = mmap(NULL, imP->map.mappedSize, PROT_READ | PROT_WRITE, MAP_FILE | MAP_SHARED, imP->map.fd, offset);	//	| MAP_NOCACHE
 			if(imP->map.addr == MAP_FAILED) {
 				LOG(@"errno1=%s", strerror(errno) );
 				self.failed = YES;
@@ -270,7 +270,7 @@ static void term_source(j_decompress_ptr cinfo);
 				} else {
 					inOrientOffset = 0;
 				}
-				im->outLine = im->map.row0offset + src_mgr->writtenLines/scale;	// ditto above - this far into the image from tiling perspective
+				im->outLine = im->map.row0offset + src_mgr->writtenLines/scale; // ditto above - this far into the image from tiling perspective
 				
 				// have to map on a page boundary
 				size_t tmpMapSize = im->map.bytesPerRow;
@@ -293,7 +293,7 @@ static void term_source(j_decompress_ptr cinfo);
 #endif
 
 				uint32_t *outPtr = (uint32_t *)(im->map.addr + over);
-				uint32_t *inPtr  = (uint32_t *)(scanPtr + inOrientOffset);
+				uint32_t *inPtr	 = (uint32_t *)(scanPtr + inOrientOffset);
 				
 				for(size_t col=0; col<im->map.width; ++col) {
 					*outPtr++ = *inPtr;
@@ -404,9 +404,9 @@ static void term_source(j_decompress_ptr cinfo);
 		}
 		if(src_mgr->got_header && !self.failed) {
 			BOOL ret = [self jpegOutputScanLines];
-            if(ret && !self.failed) {
-                self.finished = YES;
-            }
+			if(ret && !self.failed) {
+				self.finished = YES;
+			}
 			
 			// When we consume all the data in the web buffer, safe to free it up for the system to resuse
 			if(src_mgr->pub.bytes_in_buffer == 0) {

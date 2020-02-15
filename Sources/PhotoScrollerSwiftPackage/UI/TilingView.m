@@ -51,16 +51,16 @@
 {
 	CGRect rect = { CGPointMake(0, 0), [imageBuilder imageSize] };
 	
-    if ((self = [super initWithFrame:rect])) {
-        _imageBuilder = imageBuilder;
+	if ((self = [super initWithFrame:rect])) {
+		_imageBuilder = imageBuilder;
 
-        CATiledLayer *tiledLayer = (CATiledLayer *)[self layer];
-        tiledLayer.levelsOfDetail = imageBuilder.zoomLevels;
+		CATiledLayer *tiledLayer = (CATiledLayer *)[self layer];
+		tiledLayer.levelsOfDetail = imageBuilder.zoomLevels;
 		
 		self.opaque = YES;
 		self.clearsContextBeforeDrawing = NO;
-    }
-    return self;
+	}
+	return self;
 }
 
 //static inline long offsetFromScale(CGFloat scale) { long s = lrintf(1/scale); long idx = 0; while(s > 1) s /= 2.0f, ++idx; return idx; }
@@ -69,7 +69,7 @@
 {
 	if(_imageBuilder.failed) return;
 
-    CGFloat scale = CGContextGetCTM(context).a;
+	CGFloat scale = CGContextGetCTM(context).a;
 
 	// Fetch clip box in *view* space; context's CTM is preconfigured for view space->tile space transform
 	CGRect box = CGContextGetClipBoundingBox(context);
@@ -141,7 +141,7 @@ if(CGImageGetWidth(image) == 0 || CGImageGetHeight(image) == 0) {
 #if __LP64__
 	long col = lrint( floor(pt.x / tileSize.width) );
 	long row = lrint( floor(pt.y / tileSize.height) );
-	CGPoint offsetPt = CGPointMake( round(pt.x - col * tileSize.width), round(  (pt.y - row * tileSize.height) ) );
+	CGPoint offsetPt = CGPointMake( round(pt.x - col * tileSize.width), round(	(pt.y - row * tileSize.height) ) );
 #else
 	long col = lrintf( floorf(pt.x / tileSize.width) );
 	long row = lrintf( floorf(pt.y / tileSize.height) );
@@ -175,7 +175,7 @@ if(CGImageGetWidth(image) == 0 || CGImageGetHeight(image) == 0) {
 
 	free(buffer);
 		
-    return [UIColor colorWithRed:r green:g blue:b alpha:a];
+	return [UIColor colorWithRed:r green:g blue:b alpha:a];
 }
 
 @end

@@ -82,7 +82,7 @@
 		LOG(@"UNMAP[%d]: addr=%p 0x%X bytes", im->map.fd, im->map.emptyAddr, (NSUInteger)im->map.mappedSize);
 #endif
 		if(ret) self.failed = YES;
-        [self writeToFileSystem:im];
+		[self writeToFileSystem:im];
 	}
 	
 	return YES;
@@ -97,7 +97,7 @@
 		LOG(@"Failed to truncate file!");
 		self.failed = YES;
 	}
-	im->map.mappedSize = 0;	// force errors if someone tries to use mmap now
+	im->map.mappedSize = 0; // force errors if someone tries to use mmap now
 }
 
 - (void)createLevelsAndTile

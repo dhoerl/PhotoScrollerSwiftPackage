@@ -21,19 +21,19 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface ImageScrollView : UIScrollView <UIScrollViewDelegate>
-@property (class, nonatomic, assign) BOOL annotateTiles;    // if you want a thin white line around tiles. Default is off.
+@property (class, nonatomic, assign) BOOL annotateTiles;	// if you want a thin white line around tiles. Default is off.
 
 @property (nonatomic, assign) BOOL aspectFill;
-@property (nonatomic, strong) UIView *imageView;            // in case you want to grab the image for other purposes, and then nil it
+@property (nonatomic, strong) UIView *imageView;			// in case you want to grab the image for other purposes, and then nil it
 
 - (void)displayObject:(id)obj;
-- (void)setMaxMinZoomScalesForCurrentBounds;                // update if you resize the view
+- (void)setMaxMinZoomScalesForCurrentBounds;				// update if you resize the view
 
 - (CGPoint)pointToCenterAfterRotation;
 - (CGFloat)scaleToRestoreAfterRotation;
 - (void)restoreCenterPoint:(CGPoint)oldCenter scale:(CGFloat)oldScale;
 
-- (UIImage *)image;                                         // returns an image of the current contents
+- (UIImage *)image;											// returns an image of the current contents
 
 @end
 

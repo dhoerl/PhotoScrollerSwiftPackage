@@ -20,7 +20,7 @@
 #import "TiledImageBuilder-Private.h"
 
 #if 0	// 0 == no debug, 1 == lots of mesages
-#define LOG(...) NSLog(@"TB: " __VA_ARGS__)    // joins the string here and the first varargs
+#define LOG(...) NSLog(@"TB: " __VA_ARGS__)	   // joins the string here and the first varargs
 #else
 #define LOG(...)
 #endif
@@ -92,136 +92,136 @@ static uint64_t DeltaMAT(uint64_t then, uint64_t now)
  * The ratio is used to compute a threshold (see the code).
  */
 
-static atomic_int_fast64_t  ubc_usage = ATOMIC_VAR_INIT(0); // rough idea of what our buffer cache usage is
+static atomic_int_fast64_t	ubc_usage = ATOMIC_VAR_INIT(0); // rough idea of what our buffer cache usage is
 static dispatch_semaphore_t ucbSema;
-static float                ubc_threshold_ratio;
+static float				ubc_threshold_ratio;
 
 @implementation TiledImageBuilder
 {
-    NSString            *_imagePath;
-    BOOL                mapWholeFile;
-    NSMutableData       *bufferedData;
-    NSStreamStatus      _streamStatus;
-    NSError             *_streamError;
-    BOOL                _hasSpaceAvailable;
-    BOOL                preDeterminedLevels;
+	NSString			*_imagePath;
+	BOOL				mapWholeFile;
+	NSMutableData		*bufferedData;
+	NSStreamStatus		_streamStatus;
+	NSError				*_streamError;
+	BOOL				_hasSpaceAvailable;
+	BOOL				preDeterminedLevels;
 }
 
 + (void)initialize
 {
 	if(self == [TiledImageBuilder class]) {
 		colorSpace = CGColorSpaceCreateDeviceRGB();
-        ubc_threshold_ratio = 0.5f;                 // default ratio - can override with class method below
-        ucbSema = dispatch_semaphore_create(1);     // See "mapMemoryForIndex" - wait for this to be "1"
-    }
+		ubc_threshold_ratio = 0.5f;					// default ratio - can override with class method below
+		ucbSema = dispatch_semaphore_create(1);		// See "mapMemoryForIndex" - wait for this to be "1"
+	}
 }
 
 + (CGColorSpaceRef)colorSpace
 {
-    return colorSpace;
+	return colorSpace;
 }
 
 + (void)setUbcThreshold:(float)val
 {
-    ubc_threshold_ratio = val;
+	ubc_threshold_ratio = val;
 }
 
 + (int64_t)ubcUsage
 {
-    return atomic_load(&ubc_usage);
+	return atomic_load(&ubc_usage);
 }
 + (void)updateUbc:(int64_t)value {
-    atomic_fetch_add(&ubc_usage, value);
+	atomic_fetch_add(&ubc_usage, value);
 
-    LOG(@"UBC=%lld M", self.ubcUsage/(1024*1024));
+	LOG(@"UBC=%lld M", self.ubcUsage/(1024*1024));
 }
 //+ (bool)compareFlushGroupSuspendedExpected:(bool )expectedValue desired:(bool)desired {
-//    bool expected = expectedValue;
-//    //bool *expectedP = expected ? &atomicTrue : &atomicFalse;
-//    return atomic_compare_exchange_strong(&fileFlushGroupSuspended, &expected, desired);
+//	  bool expected = expectedValue;
+//	  //bool *expectedP = expected ? &atomicTrue : &atomicFalse;
+//	  return atomic_compare_exchange_strong(&fileFlushGroupSuspended, &expected, desired);
 //}
 
 - (instancetype)initWithSize:(CGSize)sz
 {
-    self = [self initWithSize:sz orientation:0];
-    return self;
+	self = [self initWithSize:sz orientation:0];
+	return self;
 }
 
-- (instancetype)initWithSize:(CGSize)sz orientation:(NSInteger)orient /* queue:(dispatch_queue_t)queue  delegate:(NSObject<NSStreamDelegate> *)del */
+- (instancetype)initWithSize:(CGSize)sz orientation:(NSInteger)orient /* queue:(dispatch_queue_t)queue	delegate:(NSObject<NSStreamDelegate> *)del */
 {
-    self = [super init];
-    _size = sz;
-    _orientation = orient;
-    [self commonInit];
-    return self;
+	self = [super init];
+	_size = sz;
+	_orientation = orient;
+	[self commonInit];
+	return self;
 }
 
 - (void)commonInit {
 #if TIMING_STATS == 1 && !defined(NDEBUG)
-    _startTime = [self timeStamp];
+	_startTime = [self timeStamp];
 #endif
-    bufferedData    = [NSMutableData new];
-    _streamStatus   = NSStreamStatusNotOpen;
-    _pageSize        = getpagesize();
+	bufferedData	= [NSMutableData new];
+	_streamStatus	= NSStreamStatusNotOpen;
+	_pageSize		 = getpagesize();
 
-    freeMemory fm = [self freeMemory:@"Initialize"];
-    float freeThresh = (float)fm.freeMemory*ubc_threshold_ratio;
-    _ubc_threshold = (int64_t)lrintf(freeThresh);
-    LOG(@"B: freeThresh=%ld ubc_thresh=%ld", (long)(freeThresh/(1024*1024)), (long)(_ubc_threshold/(1024*1024)));
-    LOG(@"C: freeFileSpace=%lld", freeFileSpace());
-    _src_mgr = calloc(1, sizeof(co_jpeg_source_mgr));
+	freeMemory fm = [self freeMemory:@"Initialize"];
+	float freeThresh = (float)fm.freeMemory*ubc_threshold_ratio;
+	_ubc_threshold = (int64_t)lrintf(freeThresh);
+	LOG(@"B: freeThresh=%ld ubc_thresh=%ld", (long)(freeThresh/(1024*1024)), (long)(_ubc_threshold/(1024*1024)));
+	LOG(@"C: freeFileSpace=%lld", freeFileSpace());
+	_src_mgr = calloc(1, sizeof(co_jpeg_source_mgr));
 }
 
 - (instancetype)initWithLevels:(NSInteger)levels
 {
-    self = [self initWithLevels:levels orientation:0];
-    return self;
+	self = [self initWithLevels:levels orientation:0];
+	return self;
 }
 
 - (instancetype)initWithLevels:(NSInteger)levels orientation:(NSInteger)orient
 {
-    self = [super init];
+	self = [super init];
 
-    assert(levels > 0);
-    _zoomLevels = levels;
-    _ims = calloc(_zoomLevels, sizeof(imageMemory));
+	assert(levels > 0);
+	_zoomLevels = levels;
+	_ims = calloc(_zoomLevels, sizeof(imageMemory));
 
-    _orientation = orient;
-    [self commonInit];
+	_orientation = orient;
+	[self commonInit];
 	return self;
 }
 
 - (void)dealloc
 {
-    [self cancel];
+	[self cancel];
 }
 
 - (void)cancel
 {
-    self.isCancelled = YES;
-    _streamStatus = NSStreamStatusError;
+	self.isCancelled = YES;
+	_streamStatus = NSStreamStatusError;
 
 	//[[NSNotificationCenter defaultCenter] removeObserver:self];
-    if(_ims) {
-        for(NSUInteger idx=0; idx<_zoomLevels;++idx) {
-            int fd = _ims[idx].map.fd;
-            if(fd>0) close(fd);
-        }
-        free(_ims); _ims = nil;
-    }
+	if(_ims) {
+		for(NSUInteger idx=0; idx<_zoomLevels;++idx) {
+			int fd = _ims[idx].map.fd;
+			if(fd>0) close(fd);
+		}
+		free(_ims); _ims = nil;
+	}
 
 	if(_imageFile) { fclose(_imageFile); _imageFile = nil; }
 	if(_imagePath) { unlink([_imagePath fileSystemRepresentation]); _imagePath = nil; }
-    if(_src_mgr) {
-        if(_src_mgr->cinfo.src)	{ jpeg_destroy_decompress(&_src_mgr->cinfo); }
-        free(_src_mgr); _src_mgr = nil;
-    }
+	if(_src_mgr) {
+		if(_src_mgr->cinfo.src) { jpeg_destroy_decompress(&_src_mgr->cinfo); }
+		free(_src_mgr); _src_mgr = nil;
+	}
 }
 
 #if 0
 - (void)lowMemory:(NSNotification *)note
 {
-    LOG(@"YIKES LOW MEMORY: ubc_threshold=%lld ubc_usage=%lld", _ubc_threshold, [TiledImageBuilder ubcUsage]);
+	LOG(@"YIKES LOW MEMORY: ubc_threshold=%lld ubc_usage=%lld", _ubc_threshold, [TiledImageBuilder ubcUsage]);
 	_ubc_threshold = (int32_t)lrintf((float)_ubc_threshold * ubc_threshold_ratio);
 	
 	[self freeMemory:@"Yikes!"];
@@ -240,7 +240,7 @@ static float                ubc_threshold_ratio;
 		if(imageSize.height < _size.height || imageSize.width < _size.width) break;
 		++zLevels;
 	}
-    //LOG(@"ZLEVELS=%d", zLevels);
+	//LOG(@"ZLEVELS=%d", zLevels);
 	return zLevels;
 }
 
@@ -262,11 +262,11 @@ static float                ubc_threshold_ratio;
 			}
 
 			fstore_t fst;
-			fst.fst_flags      = 0; 				/* iOS10 broke F_ALLOCATECONTIG;*/  // could add F_ALLOCATEALL?
-			fst.fst_posmode    = F_PEOFPOSMODE;     // allocate from EOF (0)
-			fst.fst_offset     = 0;                 // offset relative to the EOF
-			fst.fst_length     = sz;
-			fst.fst_bytesalloc = 0;                 // why not but is not needed
+			fst.fst_flags	   = 0;					/* iOS10 broke F_ALLOCATECONTIG;*/	// could add F_ALLOCATEALL?
+			fst.fst_posmode	   = F_PEOFPOSMODE;		// allocate from EOF (0)
+			fst.fst_offset	   = 0;					// offset relative to the EOF
+			fst.fst_length	   = sz;
+			fst.fst_bytesalloc = 0;					// why not but is not needed
 
 			ret = ftruncate(fd, sz);				// Now the file is there for sure
 			if(ret == -1) {
@@ -288,10 +288,10 @@ static float                ubc_threshold_ratio;
 - (void)mapMemoryForIndex:(size_t)idx width:(size_t)w height:(size_t)h
 {
 	// Don't open another file til memory pressure has dropped
-    assert(!NSThread.isMainThread);
+	assert(!NSThread.isMainThread);
 	//dispatch_group_wait(fileFlushGroup, DISPATCH_TIME_FOREVER);
-    dispatch_semaphore_wait(ucbSema, DISPATCH_TIME_FOREVER);    // decrements
-    dispatch_semaphore_signal(ucbSema);                         // restores old value
+	dispatch_semaphore_wait(ucbSema, DISPATCH_TIME_FOREVER);	// decrements
+	dispatch_semaphore_signal(ucbSema);							// restores old value
 
 
 	imageMemory *imsP = &_ims[idx];
@@ -354,7 +354,7 @@ static float                ubc_threshold_ratio;
 	}
 
 	if(mapWholeFile && !mapP->emptyAddr) {	
-		mapP->emptyAddr = mmap(NULL, mapP->mappedSize, PROT_READ | PROT_WRITE, MAP_FILE | MAP_SHARED | MAP_NOCACHE, mapP->fd, 0);	//  | MAP_NOCACHE
+		mapP->emptyAddr = mmap(NULL, mapP->mappedSize, PROT_READ | PROT_WRITE, MAP_FILE | MAP_SHARED | MAP_NOCACHE, mapP->fd, 0);	//	| MAP_NOCACHE
 		mapP->addr = mapP->emptyAddr + mapP->emptyTileRowSize;
 		if(mapP->emptyAddr == MAP_FAILED) {
 			_failed = YES;
@@ -394,7 +394,7 @@ static float                ubc_threshold_ratio;
 
 		unsigned char *addr = _ims[0].map.addr + _ims[0].map.col0offset + _ims[0].map.row0offset*_ims[0].map.bytesPerRow;
 		CGContextRef context = CGBitmapContextCreate(addr, _ims[0].map.width, _ims[0].map.height, bitsPerComponent, _ims[0].map.bytesPerRow, colorSpace,
-			kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Little); 	// kCGImageAlphaNoneSkipFirst kCGImageAlphaNoneSkipLast   kCGBitmapByteOrder32Big kCGBitmapByteOrder32Little
+			kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Little);	// kCGImageAlphaNoneSkipFirst kCGImageAlphaNoneSkipLast	  kCGBitmapByteOrder32Big kCGBitmapByteOrder32Little
 		assert(context);
 		CGContextSetBlendMode(context, kCGBlendModeCopy); // Apple uses this in QA1708
 		CGRect rect = CGRectMake(0, 0, _ims[0].map.width, _ims[0].map.height);
@@ -411,39 +411,39 @@ static float                ubc_threshold_ratio;
 #pragma mark Memory Management
 
 - (void)writeToFileSystem:(imageMemory *)im {
-    // don't need the scratch space now
-    [self truncateEmptySpace:im];
+	// don't need the scratch space now
+	[self truncateEmptySpace:im];
 
-    int fd = im->map.fd;
-    assert(fd != -1);
-    size_t file_size = lseek(fd, 0, SEEK_END);
-    [TiledImageBuilder updateUbc:file_size];
+	int fd = im->map.fd;
+	assert(fd != -1);
+	size_t file_size = lseek(fd, 0, SEEK_END);
+	[TiledImageBuilder updateUbc:file_size];
 
-    int64_t threshold = self.ubc_threshold;
+	int64_t threshold = self.ubc_threshold;
 
-    BOOL didWait;
-    if([TiledImageBuilder ubcUsage] > threshold) {
-        dispatch_semaphore_wait(ucbSema, 0);
-        didWait = YES;
-    } else {
-        didWait = NO;
-    }
+	BOOL didWait;
+	if([TiledImageBuilder ubcUsage] > threshold) {
+		dispatch_semaphore_wait(ucbSema, 0);
+		didWait = YES;
+	} else {
+		didWait = NO;
+	}
 
-    __typeof__(self) __weak weakSelf = self;
-    //dispatch_group_async(fileFlushGroup, fileFlushQueue, ^
-    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^
-        {
-            // Always do this - keep the usage correct even if cancelled
-            [TiledImageBuilder updateUbc:-file_size];
-            if(didWait) { dispatch_semaphore_signal(ucbSema); }
+	__typeof__(self) __weak weakSelf = self;
+	//dispatch_group_async(fileFlushGroup, fileFlushQueue, ^
+	dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^
+		{
+			// Always do this - keep the usage correct even if cancelled
+			[TiledImageBuilder updateUbc:-file_size];
+			if(didWait) { dispatch_semaphore_signal(ucbSema); }
 
-            // only reason for this is to not sync the file if we're getting cancelled
-            __typeof__(self) strongSelf = weakSelf;
-            if(!strongSelf || strongSelf.isCancelled) return;
-            // need to make sure file is kept open til we flush - who knows what will happen otherwise
-            int ret = fcntl(fd,  F_FULLFSYNC);
-            if(ret == -1) LOG(@"ERROR: failed to sync fd=%d", fd);
-        } );
+			// only reason for this is to not sync the file if we're getting cancelled
+			__typeof__(self) strongSelf = weakSelf;
+			if(!strongSelf || strongSelf.isCancelled) return;
+			// need to make sure file is kept open til we flush - who knows what will happen otherwise
+			int ret = fcntl(fd,	 F_FULLFSYNC);
+			if(ret == -1) LOG(@"ERROR: failed to sync fd=%d", fd);
+		} );
 }
 
 #pragma mark Utilities
@@ -455,8 +455,8 @@ static float                ubc_threshold_ratio;
 
 - (freeMemory)freeMemory:(NSString *)msg {
 #ifndef NDEBUG
-    LOG(@"%@", msg);
-    memoryStats();
+	LOG(@"%@", msg);
+	memoryStats();
 #endif
 }
 
@@ -472,10 +472,10 @@ void dump_memory_usage() {
   mach_msg_type_number_t size = sizeof( info );
   kern_return_t kerr = task_info( mach_task_self(), TASK_BASIC_INFO, (task_info_t)&info, &size );
   if ( kerr == KERN_SUCCESS ) {
-    LOG( @"task_info: 0x%08lx 0x%08lx\n", info.virtual_size, info.resident_size );
+	LOG( @"task_info: 0x%08lx 0x%08lx\n", info.virtual_size, info.resident_size );
   }
   else {
-    LOG( @"task_info failed with error %ld ( 0x%08lx ), '%s'\n", kerr, kerr, mach_error_string( kerr ) );
+	LOG( @"task_info failed with error %ld ( 0x%08lx ), '%s'\n", kerr, kerr, mach_error_string( kerr ) );
   }
 }
 #endif
@@ -489,36 +489,36 @@ static BOOL dump_memory_usage(struct task_basic_info *info) {
 
 static uint64_t freeFileSpace() {
 	// http://stackoverflow.com/questions/5712527
-    float totalFreeSpace = 0;
-    __autoreleasing NSError *error = nil;
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    NSDictionary *dictionary = [[NSFileManager defaultManager] attributesOfFileSystemForPath:[paths lastObject] error: &error];
+	float totalFreeSpace = 0;
+	__autoreleasing NSError *error = nil;
+	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+	NSDictionary *dictionary = [[NSFileManager defaultManager] attributesOfFileSystemForPath:[paths lastObject] error: &error];
 
-    if (dictionary) {
-        NSNumber *freeFileSystemSizeInBytes = [dictionary objectForKey:NSFileSystemFreeSize];
-        totalFreeSpace = [freeFileSystemSizeInBytes unsignedLongLongValue];
-    } else {
-        LOG(@"Error Obtaining System Memory Info: Domain = %@, Code = %ld", [error domain], (long)[error code]);
-    }
+	if (dictionary) {
+		NSNumber *freeFileSystemSizeInBytes = [dictionary objectForKey:NSFileSystemFreeSize];
+		totalFreeSpace = [freeFileSystemSizeInBytes unsignedLongLongValue];
+	} else {
+		LOG(@"Error Obtaining System Memory Info: Domain = %@, Code = %ld", [error domain], (long)[error code]);
+	}
 
-    return totalFreeSpace;
+	return totalFreeSpace;
 }
 
 static freeMemory memoryStats() {
 	// http://stackoverflow.com/questions/5012886
-    mach_port_t host_port;
-    mach_msg_type_number_t host_size;
-    vm_size_t pagesize;
+	mach_port_t host_port;
+	mach_msg_type_number_t host_size;
+	vm_size_t pagesize;
 	freeMemory fm = { 0, 0, 0, 0, 0 };
 
-    host_port = mach_host_self();
-    host_size = sizeof(vm_statistics_data_t) / sizeof(integer_t);
-    host_page_size(host_port, &pagesize);
+	host_port = mach_host_self();
+	host_size = sizeof(vm_statistics_data_t) / sizeof(integer_t);
+	host_page_size(host_port, &pagesize);
 
-    vm_statistics_data_t vm_stat;
+	vm_statistics_data_t vm_stat;
 
-    if (host_statistics(host_port, HOST_VM_INFO, (host_info_t)&vm_stat, &host_size) != KERN_SUCCESS) {
-        LOG(@"Failed to fetch vm statistics");
+	if (host_statistics(host_port, HOST_VM_INFO, (host_info_t)&vm_stat, &host_size) != KERN_SUCCESS) {
+		LOG(@"Failed to fetch vm statistics");
 	} else {
 		/* Stats in bytes */
 		uint64_t mem_used = (uint64_t)((vm_stat.active_count + vm_stat.wire_count) * pagesize);
@@ -535,7 +535,7 @@ static freeMemory memoryStats() {
 			fm.virtual_size = info.virtual_size;
 		}
 
-		LOG(@"%@:   "
+		LOG(@"%@:	"
 			"total: %lu "
 			"used: %lu "
 			"FREE: %lu "
@@ -554,50 +554,50 @@ static freeMemory memoryStats() {
 @implementation TiledImageBuilder (NSStreamDelegate)
 
 - (NSInteger)write:(const uint8_t *)buffer maxLength:(NSUInteger)len {
-    if(len == 0 || _streamStatus != NSStreamStatusOpen) { LOG(@"TIB BOGUS WRITE"); return 0; }
-    _streamStatus = NSStreamStatusWriting;
+	if(len == 0 || _streamStatus != NSStreamStatusOpen) { LOG(@"TIB BOGUS WRITE"); return 0; }
+	_streamStatus = NSStreamStatusWriting;
 
-    // We need to get enough to decompress the header. If its not enought, buffer the data
-    NSData *data;
-    NSData *thisData = [[NSData alloc] initWithBytes:buffer length:len];
-    if([bufferedData length]) {
-        [bufferedData appendData:thisData];
-        data = bufferedData;
-        LOG(@"TIB BUFFERED WRITE %d", (int)bufferedData.length);
-    } else {
-        LOG(@"TIB INPUT WRITE %d", (int)thisData.length);
-        data = thisData;
-    }
+	// We need to get enough to decompress the header. If its not enought, buffer the data
+	NSData *data;
+	NSData *thisData = [[NSData alloc] initWithBytes:buffer length:len];
+	if([bufferedData length]) {
+		[bufferedData appendData:thisData];
+		data = bufferedData;
+		LOG(@"TIB BUFFERED WRITE %d", (int)bufferedData.length);
+	} else {
+		LOG(@"TIB INPUT WRITE %d", (int)thisData.length);
+		data = thisData;
+	}
 
 
-    BOOL consumed = [self jpegAdvance:data];
-    if(consumed) {
-        [bufferedData setLength:0];
-    } else {
-        if([bufferedData length] == 0) {
-            [bufferedData appendData:thisData];
-        }
-    }
-    if(self.failed) {
-        _streamStatus = NSStreamStatusError;
-    } else
-    if(self.finished) {
-        _streamStatus = NSStreamStatusAtEnd;
-    } else {
-        _streamStatus = NSStreamStatusOpen;
-    }
-    return len;
+	BOOL consumed = [self jpegAdvance:data];
+	if(consumed) {
+		[bufferedData setLength:0];
+	} else {
+		if([bufferedData length] == 0) {
+			[bufferedData appendData:thisData];
+		}
+	}
+	if(self.failed) {
+		_streamStatus = NSStreamStatusError;
+	} else
+	if(self.finished) {
+		_streamStatus = NSStreamStatusAtEnd;
+	} else {
+		_streamStatus = NSStreamStatusOpen;
+	}
+	return len;
 }
 
 - (void)open {
-    LOG(@"TIB OPEN");
-    [self jpegInitNetwork];
-    _streamStatus = NSStreamStatusOpen;
+	LOG(@"TIB OPEN");
+	[self jpegInitNetwork];
+	_streamStatus = NSStreamStatusOpen;
 }
 
 - (void)close {
-    if( _streamStatus != NSStreamStatusOpen) { return; }
-    _streamStatus = NSStreamStatusClosed;
+	if( _streamStatus != NSStreamStatusOpen) { return; }
+	_streamStatus = NSStreamStatusClosed;
 }
 
 - (nullable id)propertyForKey:(NSStreamPropertyKey)key { return nil; }
@@ -607,14 +607,14 @@ static freeMemory memoryStats() {
 - (void)removeFromRunLoop:(NSRunLoop *)aRunLoop forMode:(NSRunLoopMode)mode { return nil; }
 
 - (BOOL)hasSpaceAvailable {
-    return _hasSpaceAvailable;
+	return _hasSpaceAvailable;
 }
 
 - (NSStreamStatus)streamStatus {
-    return _streamStatus;
+	return _streamStatus;
 }
 - (NSError *)streamError {
-    return _streamError;
+	return _streamError;
 }
 
 @end
