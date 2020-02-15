@@ -59,6 +59,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (atomic, assign, readonly) BOOL finished;                 // image was successfully decoded!
 @property (atomic, assign, readonly) BOOL isCancelled;              // image was successfully decoded!
 
+@property (atomic, strong) NSString *identifier;                    // User settable identification
 @property (nonatomic, assign) int64_t ubc_threshold;                // UBC threshold above which outstanding writes are flushed to the file system (dynamic default)
 @property (class, assign, readonly) int64_t ubcUsage;               // current outstanding fil;e system writes
 

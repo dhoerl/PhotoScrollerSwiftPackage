@@ -92,13 +92,9 @@ static uint64_t DeltaMAT(uint64_t then, uint64_t now)
  * The ratio is used to compute a threshold (see the code).
  */
 
-static atomic_int_fast64_t  _incr = ATOMIC_VAR_INIT(0);
 static atomic_int_fast64_t  ubc_usage = ATOMIC_VAR_INIT(0); // rough idea of what our buffer cache usage is
-static atomic_bool          fileFlushGroupSuspended = ATOMIC_VAR_INIT(false);
-
-static dispatch_queue_t		fileFlushQueue;
-static dispatch_group_t		fileFlushGroup;
-static float				ubc_threshold_ratio;
+static dispatch_semaphore_t ucbSema;
+static float                ubc_threshold_ratio;
 
 @implementation TiledImageBuilder
 {
@@ -115,29 +111,21 @@ static float				ubc_threshold_ratio;
 {
 	if(self == [TiledImageBuilder class]) {
 		colorSpace = CGColorSpaceCreateDeviceRGB();
-        ubc_threshold_ratio = 0.5f;    // default ratio - can override with class method below
-
-        fileFlushGroup = dispatch_group_create();
-        fileFlushQueue = dispatch_queue_create("com.pssp.TiledImageBuilder", DISPATCH_QUEUE_SERIAL);
-        dispatch_set_target_queue(fileFlushQueue, dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0));
-	}
+        ubc_threshold_ratio = 0.5f;                 // default ratio - can override with class method below
+        ucbSema = dispatch_semaphore_create(1);     // See "mapMemoryForIndex" - wait for this to be "1"
+    }
 }
+
 + (CGColorSpaceRef)colorSpace
 {
-	return colorSpace;
+    return colorSpace;
 }
+
 + (void)setUbcThreshold:(float)val
 {
-	ubc_threshold_ratio = val;
+    ubc_threshold_ratio = val;
 }
-//+ (dispatch_queue_t)fileFlushQueue
-//{
-//	return fileFlushQueue;
-//}
-//+ (dispatch_group_t)fileFlushGroup
-//{
-//	return fileFlushGroup;
-//}
+
 + (int64_t)ubcUsage
 {
     return atomic_load(&ubc_usage);
@@ -145,13 +133,13 @@ static float				ubc_threshold_ratio;
 + (void)updateUbc:(int64_t)value {
     atomic_fetch_add(&ubc_usage, value);
 
-    LOG(@"UBC=%lld M", Self.ubcUsage/(1024*1024));
+    NSLog(@"UBC=%lld M", self.ubcUsage/(1024*1024));
 }
-+ (bool)compareFlushGroupSuspendedExpected:(bool )expectedValue desired:(bool)desired {
-    bool expected = expectedValue;
-    //bool *expectedP = expected ? &atomicTrue : &atomicFalse;
-    return atomic_compare_exchange_strong(&fileFlushGroupSuspended, &expected, desired);
-}
+//+ (bool)compareFlushGroupSuspendedExpected:(bool )expectedValue desired:(bool)desired {
+//    bool expected = expectedValue;
+//    //bool *expectedP = expected ? &atomicTrue : &atomicFalse;
+//    return atomic_compare_exchange_strong(&fileFlushGroupSuspended, &expected, desired);
+//}
 
 - (instancetype)initWithSize:(CGSize)sz
 {
@@ -230,7 +218,6 @@ static float				ubc_threshold_ratio;
     }
 }
 
-
 #if 0
 - (void)lowMemory:(NSNotification *)note
 {
@@ -302,7 +289,10 @@ static float				ubc_threshold_ratio;
 {
 	// Don't open another file til memory pressure has dropped
     assert(!NSThread.isMainThread);
-	dispatch_group_wait(fileFlushGroup, DISPATCH_TIME_FOREVER);
+	//dispatch_group_wait(fileFlushGroup, DISPATCH_TIME_FOREVER);
+    dispatch_semaphore_wait(ucbSema, DISPATCH_TIME_FOREVER);    // decrements
+    dispatch_semaphore_signal(ucbSema);                         // restores old value
+
 
 	imageMemory *imsP = &_ims[idx];
 	
@@ -431,37 +421,22 @@ static float				ubc_threshold_ratio;
 
     int64_t threshold = self.ubc_threshold;
 
+    BOOL didWait;
     if([TiledImageBuilder ubcUsage] > threshold) {
-        //if(OSAtomicCompareAndSwap32(0, 1, &fileFlushGroupSuspended)) {
-        if([TiledImageBuilder compareFlushGroupSuspendedExpected:false desired:true]) {
-            // LOG(@"SUSPEND==========================================================usage=%d thresh=%d", ubc_usage, ubc_thresh);
-            dispatch_suspend(fileFlushQueue);
-#if MEMORY_DEBUGGING
-            LOG(@"Blocked File Flush Queue");
-#endif
-        }
-#if MEMORY_DEBUGGING
-        [self freeMemory:[NSString stringWithFormat:@"Exceeded threshold: usage=%lld thresh=%lld", [TiledImageBuilder ubcUsage], self.ubc_threshold]];
-#endif
+        dispatch_semaphore_wait(ucbSema, 0);
+        didWait = YES;
     } else {
-#if MEMORY_DEBUGGING
-        [self freeMemory:[NSString stringWithFormat:@"Under threshold: usage=%lld thresh=%lld", [TiledImageBuilder ubcUsage], self.ubc_threshold]];
-#endif
+        didWait = NO;
     }
 
     __typeof__(self) __weak weakSelf = self;
-    dispatch_group_async(fileFlushGroup, fileFlushQueue, ^
+    //dispatch_group_async(fileFlushGroup, fileFlushQueue, ^
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^
         {
             // Always do this - keep the usage correct even if cancelled
             [TiledImageBuilder updateUbc:-file_size];
-            if([TiledImageBuilder ubcUsage] <= threshold) {
-                if([TiledImageBuilder compareFlushGroupSuspendedExpected:true desired:false]) {
-                    dispatch_resume(fileFlushQueue);
-#if MEMORY_DEBUGGING
-                    LOG(@"unblocked File Flush Queue");
-#endif
-                }
-            }
+            if(didWait) { dispatch_semaphore_signal(ucbSema); }
+
             // only reason for this is to not sync the file if we're getting cancelled
             __typeof__(self) strongSelf = weakSelf;
             if(!strongSelf || strongSelf.isCancelled) return;
@@ -579,7 +554,7 @@ static freeMemory memoryStats() {
 @implementation TiledImageBuilder (NSStreamDelegate)
 
 - (NSInteger)write:(const uint8_t *)buffer maxLength:(NSUInteger)len {
-    if(len == 0 || _streamStatus != NSStreamStatusOpen) { return 0; }
+    if(len == 0 || _streamStatus != NSStreamStatusOpen) { LOG(@"TIB BOGUS WRITE"); return 0; }
     _streamStatus = NSStreamStatusWriting;
 
     // We need to get enough to decompress the header. If its not enought, buffer the data
@@ -588,9 +563,12 @@ static freeMemory memoryStats() {
     if([bufferedData length]) {
         [bufferedData appendData:thisData];
         data = bufferedData;
+        LOG(@"TIB BUFFERED WRITE %d", (int)bufferedData.length);
     } else {
+        LOG(@"TIB INPUT WRITE %d", (int)thisData.length);
         data = thisData;
     }
+
 
     BOOL consumed = [self jpegAdvance:data];
     if(consumed) {
@@ -608,10 +586,11 @@ static freeMemory memoryStats() {
     } else {
         _streamStatus = NSStreamStatusOpen;
     }
+    return len;
 }
 
-
 - (void)open {
+    LOG(@"TIB OPEN");
     [self jpegInitNetwork];
     _streamStatus = NSStreamStatusOpen;
 }
