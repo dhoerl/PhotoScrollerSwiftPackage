@@ -57,8 +57,6 @@ static BOOL _annotateTiles;
         self.bouncesZoom = YES;
         self.decelerationRate = UIScrollViewDecelerationRateNormal; // DFH UIScrollViewDecelerationRateFast;
         self.delegate = self;
-
-self.backgroundColor = [UIColor yellowColor];
     }
     return self;
 }

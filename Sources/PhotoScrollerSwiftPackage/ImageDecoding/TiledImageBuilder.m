@@ -133,7 +133,7 @@ static float                ubc_threshold_ratio;
 + (void)updateUbc:(int64_t)value {
     atomic_fetch_add(&ubc_usage, value);
 
-    NSLog(@"UBC=%lld M", self.ubcUsage/(1024*1024));
+    LOG(@"UBC=%lld M", self.ubcUsage/(1024*1024));
 }
 //+ (bool)compareFlushGroupSuspendedExpected:(bool )expectedValue desired:(bool)desired {
 //    bool expected = expectedValue;
